@@ -13,12 +13,12 @@ import psycopg2
 import psycopg2.extras
 import queries
 import gzip
-import urllib2
+import urllib.request as urllib2
 import yaml
 from lxml import etree
 from datetime import datetime
 from datetime import timedelta
-from StringIO import StringIO
+from io import StringIO
 
 try:
     from bz2file import BZ2File
@@ -33,7 +33,7 @@ class ChangesetMD():
         self.createGeometry = createGeometry
 
     def truncateTables(self, connection):
-        print 'truncating tables'
+        print('truncating tables')
         cursor = connection.cursor()
         cursor.execute("TRUNCATE TABLE osm_changeset_comment CASCADE;")
         cursor.execute("TRUNCATE TABLE osm_changeset CASCADE;")
@@ -42,7 +42,7 @@ class ChangesetMD():
         connection.commit()
 
     def createTables(self, connection):
-        print 'creating tables'
+        print ('creating tables')
         cursor = connection.cursor()
         cursor.execute(queries.createChangesetTable)
         cursor.execute(queries.initStateTable)
@@ -84,8 +84,8 @@ class ChangesetMD():
         parsedCount = 0
         startTime = datetime.now()
         cursor = connection.cursor()
-        context = etree.iterparse(changesetFile)
-        action, root = context.next()
+        context = etree.iterparse(changesetFile)        
+        # action, root = context.next()
         changesets = []
         comments = []
         for action, elem in context:
@@ -121,10 +121,11 @@ class ChangesetMD():
             if((parsedCount % 100000) == 0):
                 self.insertNewBatch(connection, changesets)
                 self.insertNewBatchComment(connection, comments )
+                connection.commit()
                 changesets = []
                 comments = []
-                print "parsed %s" % ('{:,}'.format(parsedCount))
-                print "cumulative rate: %s/sec" % '{:,.0f}'.format(parsedCount/timedelta.total_seconds(datetime.now() - startTime))
+                print ("parsed %s" % ('{:,}'.format(parsedCount)))
+                print ("cumulative rate: %s/sec" % '{:,.0f}'.format(parsedCount/timedelta.total_seconds(datetime.now() - startTime)))
 
             #clear everything we don't need from memory to avoid leaking
             elem.clear()
@@ -134,15 +135,15 @@ class ChangesetMD():
         self.insertNewBatch(connection, changesets)
         self.insertNewBatchComment(connection, comments)
         connection.commit()
-        print "parsing complete"
-        print "parsed {:,}".format(parsedCount)
+        print ("parsing complete")
+        print ("parsed {:,}".format(parsedCount))
 
     def fetchReplicationFile(self, sequenceNumber):
         topdir = format(sequenceNumber / 1000000, '003')
         subdir = format((sequenceNumber / 1000) % 1000, '003')
         fileNumber = format(sequenceNumber % 1000, '003')
         fileUrl = BASE_REPL_URL + topdir + '/' + subdir + '/' + fileNumber + '.osm.gz'
-        print "opening replication file at " + fileUrl
+        print ("opening replication file at " + fileUrl)
         replicationFile = urllib2.urlopen(fileUrl)
         replicationData = StringIO(replicationFile.read())
         return gzip.GzipFile(fileobj=replicationData)
@@ -152,7 +153,7 @@ class ChangesetMD():
         try:
             cursor.execute('LOCK TABLE osm_changeset_state IN ACCESS EXCLUSIVE MODE NOWAIT')
         except psycopg2.OperationalError as e:
-            print "error getting lock on state table. Another process might be running"
+            print ("error getting lock on state table. Another process might be running")
             return 1
         cursor.execute('select * from osm_changeset_state')
         dbStatus = cursor.fetchone()
@@ -162,12 +163,12 @@ class ChangesetMD():
         newTimestamp = None
         if(dbStatus['last_timestamp'] is not None):
             timestamp = dbStatus['last_timestamp']
-        print "latest timestamp in database: " + str(timestamp)
+        print( "latest timestamp in database: " + str(timestamp))
         if(dbStatus['update_in_progress'] == 1):
-            print "concurrent update in progress. Bailing out!"
+            print( "concurrent update in progress. Bailing out!")
             return 1
         if(lastDbSequence == -1):
-            print "replication state not initialized. You must set the sequence number first."
+            print ("replication state not initialized. You must set the sequence number first.")
             return 1
         cursor.execute('update osm_changeset_state set update_in_progress = 1')
         connection.commit()
@@ -179,12 +180,12 @@ class ChangesetMD():
         try:
             serverState = yaml.load(urllib2.urlopen(BASE_REPL_URL + "state.yaml"))
             lastServerSequence = serverState['sequence']
-            print "got sequence"
+            print ("got sequence")
             lastServerTimestamp = serverState['last_run']
-            print "last timestamp on server: " + str(lastServerTimestamp)
+            print( "last timestamp on server: " + str(lastServerTimestamp))
         except Exception as e:
-            print "error retrieving server state file. Bailing on replication"
-            print e
+            print ("error retrieving server state file. Bailing on replication")
+            print (e)
             returnStatus = 2
         else:
             try:
@@ -200,87 +201,89 @@ class ChangesetMD():
                     timestamp = lastServerTimestamp
                 print("finished with replication. Clearing status record")
             except Exception as e:
-                print "error during replication"
-                print e
+                print ("error during replication")
+                print (e)
                 returnStatus = 2
         cursor.execute('update osm_changeset_state set update_in_progress = 0, last_timestamp = %s', (timestamp,))
         connection.commit()
         return returnStatus
 
-if __name__ == '__main__':
-    beginTime = datetime.now()
-    endTime = None
-    timeCost = None
-
-    argParser = argparse.ArgumentParser(description="Parse OSM Changeset metadata into a database")
-    argParser.add_argument('-t', '--trunc', action='store_true', default=False, dest='truncateTables', help='Truncate existing tables (also drops indexes)')
-    argParser.add_argument('-c', '--create', action='store_true', default=False, dest='createTables', help='Create tables')
-    argParser.add_argument('-H', '--host', action='store', dest='dbHost', help='Database hostname')
-    argParser.add_argument('-P', '--port', action='store', dest='dbPort', default=None, help='Database port')
-    argParser.add_argument('-u', '--user', action='store', dest='dbUser', default=None, help='Database username')
-    argParser.add_argument('-p', '--password', action='store', dest='dbPass', default=None, help='Database password')
-    argParser.add_argument('-d', '--database', action='store', dest='dbName', help='Target database', required=True)
-    argParser.add_argument('-f', '--file', action='store', dest='fileName', help='OSM changeset file to parse')
-    argParser.add_argument('-r', '--replicate', action='store_true', dest='doReplication', default=False, help='Apply a replication file to an existing database')
-    argParser.add_argument('-g', '--geometry', action='store_true', dest='createGeometry', default=False, help='Build geometry of changesets (requires postgis)')
-
-    args = argParser.parse_args()
-
-    conn = psycopg2.connect(database=args.dbName, user=args.dbUser, password=args.dbPass, host=args.dbHost, port=args.dbPort)
 
 
-    md = ChangesetMD(args.createGeometry)
-    if args.truncateTables:
-        md.truncateTables(conn)
 
-    if args.createTables:
-        md.createTables(conn)
+beginTime = datetime.now()
+endTime = None
+timeCost = None
 
-    psycopg2.extras.register_hstore(conn)
+argParser = argparse.ArgumentParser(description="Parse OSM Changeset metadata into a database")
+argParser.add_argument('-t', '--trunc', action='store_true', default=False, dest='truncateTables', help='Truncate existing tables (also drops indexes)')
+argParser.add_argument('-c', '--create', action='store_true', default=False, dest='createTables', help='Create tables')
+argParser.add_argument('-H', '--host', action='store', dest='dbHost', help='Database hostname')
+argParser.add_argument('-P', '--port', action='store', dest='dbPort', default=None, help='Database port')
+argParser.add_argument('-u', '--user', action='store', dest='dbUser', default=None, help='Database username')
+argParser.add_argument('-p', '--password', action='store', dest='dbPass', default=None, help='Database password')
+argParser.add_argument('-d', '--database', action='store', dest='dbName', help='Target database', required=True)
+argParser.add_argument('-f', '--file', action='store', dest='fileName', help='OSM changeset file to parse')
+argParser.add_argument('-r', '--replicate', action='store_true', dest='doReplication', default=False, help='Apply a replication file to an existing database')
+argParser.add_argument('-g', '--geometry', action='store_true', dest='createGeometry', default=False, help='Build geometry of changesets (requires postgis)')
 
+args = argParser.parse_args()
+
+conn = psycopg2.connect(database=args.dbName, user=args.dbUser, password=args.dbPass, host=args.dbHost, port=args.dbPort)
+
+
+md = ChangesetMD(args.createGeometry)
+if args.truncateTables:
+    md.truncateTables(conn)
+
+if args.createTables:
+    md.createTables(conn)
+
+psycopg2.extras.register_hstore(conn)
+
+if(args.doReplication):
+    returnStatus = md.doReplication(conn)
+    sys.exit(returnStatus)
+
+if not (args.fileName is None):
+    if args.createGeometry:
+        print ('parsing changeset file with geometries')
+    else:
+        print( 'parsing changeset file')
+    changesetFile = None
     if(args.doReplication):
-        returnStatus = md.doReplication(conn)
-        sys.exit(returnStatus)
-
-    if not (args.fileName is None):
-        if args.createGeometry:
-            print 'parsing changeset file with geometries'
-        else:
-            print 'parsing changeset file'
-        changesetFile = None
-        if(args.doReplication):
-            changesetFile = gzip.open(args.fileName, 'rb')
-        else:
-            if(args.fileName[-4:] == '.bz2'):
-                if(bz2Support):
-                    changesetFile = BZ2File(args.fileName)
-                else:
-                    print 'ERROR: bzip2 support not available. Unzip file first or install bz2file'
-                    sys.exit(1)
+        changesetFile = gzip.open(args.fileName, 'rb')
+    else:
+        if(args.fileName[-4:] == '.bz2'):
+            if(bz2Support):
+                changesetFile = BZ2File(args.fileName)
             else:
-                changesetFile = open(args.fileName, 'rb')
-
-        if(changesetFile != None):
-            md.parseFile(conn, changesetFile, args.doReplication)
+                print ('ERROR: bzip2 support not available. Unzip file first or install bz2file')
+                sys.exit(1)
         else:
-            print 'ERROR: no changeset file opened. Something went wrong in processing args'
-            sys.exist(1)
+            changesetFile = open(args.fileName, 'rb')
 
-        if(not args.doReplication):
-            cursor = conn.cursor()
-            print 'creating constraints'
-            cursor.execute(queries.createConstraints)
-            print 'creating indexes'
-            cursor.execute(queries.createIndexes)
-            if args.createGeometry:
-                cursor.execute(queries.createGeomIndex)
-            conn.commit()
+    if(changesetFile != None):
+        md.parseFile(conn, changesetFile, args.doReplication)
+    else:
+        print ('ERROR: no changeset file opened. Something went wrong in processing args')
+        sys.exist(1)
 
-        conn.close()
+    if(not args.doReplication):
+        cursor = conn.cursor()
+        print ('creating constraints')
+        cursor.execute(queries.createConstraints)
+        print ('creating indexes')
+        cursor.execute(queries.createIndexes)
+        if args.createGeometry:
+            cursor.execute(queries.createGeomIndex)
+        conn.commit()
 
-    endTime = datetime.now()
-    timeCost = endTime - beginTime
+    conn.close()
 
-    print 'Processing time cost is ', timeCost
+endTime = datetime.now()
+timeCost = endTime - beginTime
 
-    print 'All done. Enjoy your (meta)data!'
+print( 'Processing time cost is ', timeCost)
+
+print ('All done. Enjoy your (meta)data!')
