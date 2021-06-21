@@ -4,3 +4,6 @@ changesets-120912.osm.bz2
 changesets-120912.osm
 .idea/vcs.xml
 .idea/workspace.xml
+*.log
+*.osm
+run.bat

@@ -19,7 +19,7 @@ from lxml import etree
 from datetime import datetime
 from datetime import timedelta
 from io import StringIO
-
+import math
 try:
     from bz2file import BZ2File
     bz2Support = True
@@ -139,14 +139,23 @@ class ChangesetMD():
         print ("parsed {:,}".format(parsedCount))
 
     def fetchReplicationFile(self, sequenceNumber):
-        topdir = format(sequenceNumber / 1000000, '003')
-        subdir = format((sequenceNumber / 1000) % 1000, '003')
-        fileNumber = format(sequenceNumber % 1000, '003')
+        topdir = '{:>03}'.format(str(math.floor(sequenceNumber / 1000000))) #format(sequenceNumber / 1000000, '000')
+        subdir = '{:>03}'.format(str(math.floor((sequenceNumber / 1000) % 1000))) # format((sequenceNumber / 1000) % 1000, '000')
+        fileNumber = '{:>03}'.format(str(sequenceNumber % 1000)) # format(sequenceNumber % 1000, '000')
         fileUrl = BASE_REPL_URL + topdir + '/' + subdir + '/' + fileNumber + '.osm.gz'
         print ("opening replication file at " + fileUrl)
-        replicationFile = urllib2.urlopen(fileUrl)
-        replicationData = StringIO(replicationFile.read())
-        return gzip.GzipFile(fileobj=replicationData)
+        
+        try:
+            replicationFile = urllib2.urlopen(fileUrl)
+            #print('replicationFile', replicationFile)
+            replicationData = gzip.open(replicationFile)
+            #print('replicationData', replicationData)            
+        except Exception as e:
+            print ("error during replicationFile urllib2.urlopen(fileUrl)")
+            print (e)
+            return ''
+        
+        return replicationData
 
     def doReplication(self, connection):
         cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
