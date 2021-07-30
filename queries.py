@@ -31,6 +31,23 @@ CREATE TABLE osm_changeset_state (
   update_in_progress smallint
 );
 '''
+createOsmHistoryTable = '''
+
+CREATE TABLE public.osm_element_history (
+	id int8 NULL,
+	"type" varchar NULL,
+	tags hstore NULL,
+	lat numeric(9, 7) NULL,
+	lon numeric(10, 7) NULL,
+	nds _int8 NULL,
+	members _int8 NULL,
+	changeset int8 NULL,
+	"timestamp" timestamp NULL,
+	uid int8 NULL,
+	"version" int8 NULL,
+	"action" varchar NULL
+);
+CREATE UNIQUE INDEX osm_element_history_id_idx ON public.osm_element_history USING btree (id, version);'''
 
 initStateTable = '''INSERT INTO osm_changeset_state VALUES (-1, null, 0)''';
 
