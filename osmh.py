@@ -269,13 +269,15 @@ class osmh():
             try:
                 rng = range(int(args.fromId), int(args.toId)+1)
                 accumlativeChangesets = []
+                scanedItems = 0
                 for changesetId in rng:                    
                     # print("parsing change set changeset: " + str(changesetId))
                     # while(currentSequence <= lastServerSequence):
                     osm_element_history = self.parseHistoryFile(connection, self.fetchReplicationFile(changesetId),changesetId, True)
                     accumlativeChangesets = accumlativeChangesets + osm_element_history
-                    
-                    if (len(osm_element_history) > 100000):
+                    scanedItems = scanedItems + len(osm_element_history)
+                    if (len(osm_element_history) > 10000):
+                        print('Commited osm elements:', scanedItems)
                         self.insertNewBatch(connection, accumlativeChangesets)
                         connection.commit()
                         accumlativeChangesets.clear()
