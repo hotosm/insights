@@ -286,7 +286,11 @@ class osmh():
                     # connection.commit()
                     # currentSequence += 1
                     # timestamp = lastServerTimestamp
-                    
+                # insert the remaining 
+                print('Commited osm elements:', scanedItems)
+                self.insertNewBatch(connection, accumlativeChangesets)
+                connection.commit()
+                accumlativeChangesets.clear()
             except Exception as e:
                 print ("error during replication")
                 print (e)
