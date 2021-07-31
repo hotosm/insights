@@ -276,7 +276,7 @@ class osmh():
                     osm_element_history = self.parseHistoryFile(connection, self.fetchReplicationFile(changesetId),changesetId, True)
                     accumlativeChangesets = accumlativeChangesets + osm_element_history
                     scanedItems = scanedItems + len(osm_element_history)
-                    if (len(osm_element_history) > 10000):
+                    if (len(accumlativeChangesets) > 10000):
                         print('Commited osm elements:', scanedItems)
                         self.insertNewBatch(connection, accumlativeChangesets)
                         connection.commit()
@@ -292,8 +292,7 @@ class osmh():
                 connection.commit()
                 accumlativeChangesets.clear()
             except Exception as e:
-                print ("error during replication")
-                print (e)
+                print ("error during replication",e)
                 returnStatus = 2
         # cursor.execute('update osm_changeset_state set update_in_progress = 0, last_timestamp = %s', (timestamp,))
         # connection.commit()
