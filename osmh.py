@@ -276,7 +276,7 @@ class osmh():
                     osm_element_history = self.parseHistoryFile(connection, self.fetchReplicationFile(changesetId),changesetId, True)
                     accumlativeChangesets = accumlativeChangesets + osm_element_history
                     scanedItems = scanedItems + len(osm_element_history)
-                    if (len(accumlativeChangesets) > 100000):
+                    if (len(accumlativeChangesets) > 50000):
                         print('Commited osm elements:', scanedItems)
                         self.insertNewBatch(connection, accumlativeChangesets)
                         connection.commit()
