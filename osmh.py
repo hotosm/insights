@@ -145,6 +145,7 @@ class osmh():
         tags = {}
         nds = []
         members = []
+        beginTime  = datetime.now()
         for action, elem in context:
             # print('tags ',tags,'osm_element_history',osm_element_history )  
             parsedCount += 1
@@ -220,17 +221,17 @@ class osmh():
             # if (parsedCount == 22):
             #     sys.exit(0)
 
-            if (elem.tag == 'node' and len(osm_element_history) > 1000000) or (
-                elem.tag == 'way' and len(osm_element_history) > 500000)  or (
-                elem.tag == 'relation' and len(osm_element_history) > 300000):
+            if (elem.tag == 'node' and len(osm_element_history) >= 1000000) or (
+                elem.tag == 'way' and len(osm_element_history) >= 500000)  or (
+                elem.tag == 'relation' and len(osm_element_history) >= 300000):
                 print ('Parsed',parsedElements,'item')
-                beginTime  = datetime.now()
                 self.insertNewBatch(connection, osm_element_history)
                 connection.commit()
                 endTime = datetime.now()
                 timeCost = endTime - beginTime
                 print ('Committed elements',elem.tag ,len(osm_element_history), 'in', timeCost)
                 osm_element_history.clear() # important to avoid memory usage
+                beginTime  = datetime.now()
             elem.clear() # important to avoid memory usage
             while elem.getprevious() is not None:
                 del elem.getparent()[0]
