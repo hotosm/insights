@@ -31,6 +31,7 @@ class osmh():
     def __init__(self, createGeometry):
         self.createGeometry = createGeometry
 
+
     def truncateTables(self, connection):
         print('truncating tables')
         cursor = connection.cursor()
@@ -53,8 +54,8 @@ class osmh():
         cursor = connection.cursor()
         
         sql = '''INSERT INTO public.osm_element_history
-                (id, "type", tags, lat, lon, nds, members, changeset, "timestamp", uid, "version", "action")
-                values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING'''
+                (id, "type", tags, lat, lon, nds, members, changeset, "timestamp", uid, "version", "action",country)
+                values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING'''
         
         psycopg2.extras.execute_batch(cursor, sql, data_arr)
         
@@ -168,7 +169,7 @@ class osmh():
                 if ("base" in args.fileName):
                     action = 'base'
                 else:
-                    if (elem.attrib.get('version', None) == 1):
+                    if (elem.attrib.get('version', None) == '1'):
                         action = 'create'
                     else:
                         action = 'modify'
@@ -211,8 +212,8 @@ class osmh():
                                             elem.attrib.get('timestamp', None), # timestamp for all
                                             elem.attrib.get('uid', None), # uid for all
                                             elem.attrib.get('version', None), # version for all
-                                            action # action= create, modify, delete, base (for base line items)
-                                            ))
+                                            action, # action= create, modify, delete, base (for base line items)
+                                            args.region))
                 tags.clear()
                 nds.clear()
                 members.clear()
@@ -332,6 +333,7 @@ argParser.add_argument('-d', '--database', action='store', dest='dbName', help='
 argParser.add_argument('-f', '--file', action='store', dest='fileName', help='OSM baseline or history file, baseline file should contain base keyword in its name')
 argParser.add_argument('-r', '--replicate', action='store_true', dest='doReplication', default=False, help='Apply a replication file to an existing database')
 argParser.add_argument('-g', '--geometry', action='store_true', dest='createGeometry', default=False, help='Build geometry of changesets (requires postgis)')
+argParser.add_argument('-re', '--region', action='store', dest='region', help='Region of the parsed file')
 
 args = argParser.parse_args()
 
@@ -385,7 +387,7 @@ if not (args.fileName is None):
             #cursor.execute(queries.createGeomIndex)
         #conn.commit()
 
-    #conn.close()
+    conn.close()
 
 endTime = datetime.now()
 timeCost = endTime - beginTime
