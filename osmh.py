@@ -220,15 +220,16 @@ class osmh():
             # if (parsedCount == 22):
             #     sys.exit(0)
 
-            if (elem.tag == 'node' and len(osm_element_history) > 2000000) or (
-                elem.tag == 'way' and len(osm_element_history) > 1000000)  or (
-                elem.tag == 'relation' and len(osm_element_history) > 500000):
+            if (elem.tag == 'node' and len(osm_element_history) > 1000000) or (
+                elem.tag == 'way' and len(osm_element_history) > 500000)  or (
+                elem.tag == 'relation' and len(osm_element_history) > 300000):
+                print ('Parsed',parsedElements,'item')
                 beginTime  = datetime.now()
                 self.insertNewBatch(connection, osm_element_history)
                 connection.commit()
                 endTime = datetime.now()
                 timeCost = endTime - beginTime
-                print ('Parsed',parsedElements,'item, Committed elements',elem.tag ,len(osm_element_history), 'in', timeCost)
+                print ('Committed elements',elem.tag ,len(osm_element_history), 'in', timeCost)
                 osm_element_history.clear() # important to avoid memory usage
             elem.clear() # important to avoid memory usage
             while elem.getprevious() is not None:
