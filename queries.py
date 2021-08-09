@@ -32,7 +32,6 @@ CREATE TABLE osm_changeset_state (
 );
 '''
 createOsmHistoryTable = '''
-
 CREATE TABLE public.osm_element_history (
 	id int8 NULL,
 	"type" varchar NULL,
@@ -45,9 +44,10 @@ CREATE TABLE public.osm_element_history (
 	"timestamp" timestamp NULL,
 	uid int8 NULL,
 	"version" int8 NULL,
-	"action" varchar NULL
-);
-CREATE UNIQUE INDEX osm_element_history_id_idx ON public.osm_element_history USING btree (id, version);'''
+	"action" varchar NULL,
+	country varchar NULL,
+	CONSTRAINT osm_element_history_un UNIQUE (id,"version")
+);'''
 
 initStateTable = '''INSERT INTO osm_changeset_state VALUES (-1, null, 0)''';
 

@@ -220,11 +220,13 @@ class osmh():
             # if (parsedCount == 22):
             #     sys.exit(0)
 
-            if (parsedCount % 2000000 == 0):
-                print ('Committing elements',parsedElements)
+            if (elem.tag == 'node' and len(osm_element_history) > 2000000) or (
+                elem.tag == 'way' and len(osm_element_history) > 1000000)  or (
+                elem.tag == 'relation' and len(osm_element_history) > 500000):
+                print ('Committing elements',elem.tag ,len(osm_element_history))
                 self.insertNewBatch(connection, osm_element_history)
                 connection.commit()
-                osm_element_history.clear()
+                osm_element_history.clear() # important to avoid memory usage
             elem.clear() # important to avoid memory usage
             while elem.getprevious() is not None:
                 del elem.getparent()[0]
@@ -378,10 +380,11 @@ if not (args.fileName is None):
         sys.exist(1)
 
     if(not args.doReplication):
+        None
         #cursor = conn.cursor()
-        print ('creating constraints')
+        # print ('creating constraints')
         #cursor.execute(queries.createConstraints)
-        print ('creating indexes')
+        # print ('creating indexes')
         #cursor.execute(queries.createIndexes)
         #if args.createGeometry:
             #cursor.execute(queries.createGeomIndex)
