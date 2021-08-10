@@ -1,6 +1,6 @@
 #!/usr/bin/python
 '''
-osmh.py should parse the osm full historical file fullhistory.osm.bz2
+osmh.py should parse the osm full historical file .osm.bz2 of a specific county 
 
 @author: Omran NAJJAR
 '''
@@ -25,7 +25,7 @@ try:
 except ImportError:
     bz2Support = False
 
-BASE_REPL_URL = "http://planet.openstreetmap.org/replication/changesets/"
+BASE_REPL_URL = "https://planet.openstreetmap.org/replication/minute/"
 
 class osmh():
     def __init__(self, createGeometry):
@@ -61,6 +61,17 @@ class osmh():
         
         cursor.close()
 
+    def insertNewBatchReplication(self, connection, data_arr):
+        cursor = connection.cursor()
+        
+        sql = '''INSERT INTO public.osm_element_history
+                (id, "type", tags, lat, lon, nds, members, changeset, "timestamp", uid, "version", "action",country)
+                values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,(select g.name from public.geoboundaries g where ST_CONTAINS(st_setsrid(g.boundary,4326),st_setsrid ('POINT(%s %s)'::geometry,4326)) limit 1)) ON CONFLICT DO NOTHING'''
+        
+        psycopg2.extras.execute_batch(cursor, sql, data_arr)
+        
+        cursor.close()
+
     def insertNewBatchComment(self, connection, comment_arr):
         cursor=connection.cursor()
         sql = '''INSERT into osm_changeset_comment
@@ -71,10 +82,104 @@ class osmh():
 
     def deleteExisting(self, connection, id):
         cursor = connection.cursor()
-        cursor.execute('''DELETE FROM osm_changeset_comment
-                          WHERE comment_changeset_id = %s''', (id,))
-        cursor.execute('''DELETE FROM osm_changeset
-                          WHERE id = %s''', (id,))
+        # cursor.execute('''DELETE FROM osm_changeset
+        #                   WHERE id = %s''', (id,))
+    def getWayRelationLonLat(self, type, id):
+        
+        if (type == 'node'):
+            try:
+                url =   'https://www.openstreetmap.org/api/0.6/'+type+'/' + str(id) + '/history'
+                # url = 'https://www.openstreetmap.org/api/0.6/node/60337559/history'
+                # print ('url',url)
+                replicationFile = urllib2.urlopen(url)
+                data = replicationFile.read()
+                # data = data.
+                replicationFile.close()
+
+                data = etree.fromstring(data)
+                # context = etree.iterparse(data)        
+                
+                # print ('context',data)
+                lat = 0
+                lon = 0
+                for elem in data.iterchildren():
+                    if (elem.tag == 'node' and elem.attrib.get('lat',0) != 0):
+                        # print ('elem.attrib',elem.attrib)
+                        lat = elem.attrib.get('lat',0)
+                        lon = elem.attrib.get('lon',0)
+                return (lon,lat)
+            except Exception as e:
+                print ('element ',type,'lat,lon not found',e)
+                return (0,0)
+                
+        if (type == 'way'):
+            try:
+                url = 'https://www.openstreetmap.org/api/0.6/'+type+'/' + str(id) + '/history'
+                # url = 'https://www.openstreetmap.org/api/0.6/node/60337559/history'
+                # print ('url',url)
+                replicationFile = urllib2.urlopen(url)
+                data = replicationFile.read()
+                # data = data.
+                replicationFile.close()
+
+                data = etree.fromstring(data)
+                # context = etree.iterparse(data)        
+                
+                # print ('context',len(data))
+                
+                lastVersionWay = data[len(data)-1]
+                ndId = -1
+                i = len(data)-1
+                while i >=0 :
+                    # print ('i',i)
+                    lastVersionWay = data[i]
+                    for elemWay in lastVersionWay.iterchildren(tag='nd'):
+                        ndId = elemWay.attrib.get('ref',0)
+                        # print('ndId',ndId)
+                        if (int(ndId) > 0):
+                            break
+                    if (int(ndId) > 0):
+                            break
+                    i = i-1
+                return self.getWayRelationLonLat('node',ndId)
+            except Exception as e:
+                print ('element ',type,'lat,lon not found',e)
+                return (0,0)
+
+        if (type == 'relation'):
+            try:
+                url =   'https://www.openstreetmap.org/api/0.6/'+type+'/' + str(id) + '/history'
+                # url = 'https://www.openstreetmap.org/api/0.6/node/60337559/history'
+                # print ('url',url)
+                replicationFile = urllib2.urlopen(url)
+                data = replicationFile.read()
+                # data = data.
+                replicationFile.close()
+
+                data = etree.fromstring(data)
+                # context = etree.iterparse(data)        
+                ndId = -1
+                i = len(data)-1
+                memberType = ''
+                while i >=0 :
+                    # print ('i',i)
+                    lastVersionWay = data[i]
+                    for elemWay in lastVersionWay.iterchildren(tag='member'):
+                        ndId = elemWay.attrib.get('ref',0)
+                        memberType = elemWay.attrib.get('type',0)
+                        if (int(ndId) > 0):
+                            break
+                    if (int(ndId) > 0):
+                            break
+                    i = i-1
+                
+                return self.getWayRelationLonLat(memberType,ndId)
+            except Exception as e:
+                print ('element ',type,'lat,lon not found',e)
+                return (0,0)
+        
+        # cursor.execute('''DELETE FROM osm_changeset
+        #                   WHERE id = %s''', (id,))
 
     def parseFile(self, connection, changesetFile, doReplication):
         parsedCount = 0
@@ -82,55 +187,160 @@ class osmh():
         cursor = connection.cursor()
         context = etree.iterparse(changesetFile)        
         # action, root = context.next()
-        changesets = []
-        comments = []
-        for action, elem in context:
-            if(elem.tag != 'changeset'):
-                continue
+        tags = {}
+        nds = []
+        members = []
+        nodes = []
+        ways = []
+        relations = []
+        osm_element_history = []
+        try :
+            for a,elem in context:
+                # print('elem.tag',elem.tag)
+                parsedCount += 1
 
-            parsedCount += 1
+                if elem.tag == 'bounds':
+                    continue
 
-            tags = {}
-            for tag in elem.iterchildren(tag='tag'):
-                tags[tag.attrib['k']] = tag.attrib['v']
+                if elem.tag == 'tag':
+                    tags[elem.attrib.get('k')] = elem.attrib.get('v')
+                    continue
+                
+                if elem.tag == 'nd':
+                    nds.append(int(elem.attrib['ref'])) 
+                    continue
 
-            for discussion in elem.iterchildren(tag='discussion'):
-                for commentElement in discussion.iterchildren(tag='comment'):
-                    for text in commentElement.iterchildren(tag='text'):
-                       text = text.text
-                    comment = (elem.attrib['id'], commentElement.attrib.get('uid'),  commentElement.attrib.get('user'), commentElement.attrib.get('date'), text)
-                    comments.append(comment)
+                if elem.tag == 'member':
+                    members.append(int(elem.attrib['ref'])) 
+                    continue    
+                
+                if elem.tag == 'node':
+                   
+                    tags1 = {key: value[:] for key, value in tags.items()}
+                    nodes.append((elem.attrib.get('id', None), 
+                                                elem.tag,  # elemnt type node, way, relation
+                                                tags1, # tags
+                                                elem.attrib.get('lat', 0), # lat for node only
+                                                elem.attrib.get('lon', 0), # lon for node only
+                                                None, # nds for way only
+                                                None,# members for relation only
+                                                elem.attrib.get('changeset', None), 
+                                                elem.attrib.get('timestamp', None), # timestamp for all
+                                                elem.attrib.get('uid', None), # uid for all
+                                                elem.attrib.get('version', None), # version for all
+                                                # action is still missing
+                                                # country is still missing 
+                                                ))
+                    tags.clear()
+                if elem.tag == 'way':
+                    tags1 = {key: value[:] for key, value in tags.items()}
+                    nds1 = nds[:]        
+                    (lon,lat) = md.getWayRelationLonLat('way',elem.attrib.get('id', 0))        
+                    ways.append((elem.attrib.get('id', None), 
+                                                elem.tag,  # elemnt type node, way, relation
+                                                tags1, # tags
+                                                lat, # lat 
+                                                lon, # lon 
+                                                nds1, # nds for way only
+                                                None,# members for relation only
+                                                elem.attrib.get('changeset', None), 
+                                                elem.attrib.get('timestamp', None), # timestamp for all
+                                                elem.attrib.get('uid', None), # uid for all
+                                                elem.attrib.get('version', None), # version for all
+                                                # action is still missing
+                                                # country is still missing 
+                                                ))
+                    tags.clear()
+                    nds.clear()
+                if elem.tag == 'relation':
+                    tags1 = {key: value[:] for key, value in tags.items()}
+                    members1 = members[:]         
+                    (lon,lat) = md.getWayRelationLonLat('relation',elem.attrib.get('id', 0))    
+                    relations.append((elem.attrib.get('id', None), 
+                                                elem.tag,  # elemnt type node, way, relation
+                                                tags1, # tags
+                                                lat,
+                                                lon, # 
+                                                None, # nds for way only
+                                                members1,# members for relation only
+                                                elem.attrib.get('changeset', None), 
+                                                elem.attrib.get('timestamp', None), # timestamp for all
+                                                elem.attrib.get('uid', None), # uid for all
+                                                elem.attrib.get('version', None), # version for all
+                                                # action is still missing
+                                                # country is still missing 
+                                                ))
+                    tags.clear()
+                    members.clear()
+                if elem.tag == 'create' or elem.tag == 'delete' or elem.tag == 'modify':
+                    for (id,ntag,ntags,nlat,nlon,nnds,nmembers,nchangeset,ntimestamp,nuid,nversion) in nodes:
+                        osm_element_history.append((id, 
+                                                ntag,  # elemnt type node, way, relation
+                                                ntags, # tags
+                                                nlat, # lat for node only
+                                                nlon, # lon for node only
+                                                nnds, # nds for way only
+                                                nmembers,# members for relation only
+                                                nchangeset, 
+                                                ntimestamp, # timestamp for all
+                                                nuid, # uid for all
+                                                nversion, # version for all
+                                                elem.tag, # action= create, modify, delete, base (for base line items)
+                                                float(nlon),
+                                                float(nlat)))
 
-            if(doReplication):
-                self.deleteExisting(connection, elem.attrib['id'])
-
-            if self.createGeometry:
-                changesets.append((elem.attrib['id'], elem.attrib.get('uid', None),   elem.attrib['created_at'], elem.attrib.get('min_lat', None),
-                                elem.attrib.get('max_lat', None), elem.attrib.get('min_lon', None),  elem.attrib.get('max_lon', None), elem.attrib.get('closed_at', None),
-                                     elem.attrib.get('open', None), elem.attrib.get('num_changes', None), elem.attrib.get('user', None), tags,elem.attrib.get('min_lon', None), elem.attrib.get('min_lat', None),
-                                    elem.attrib.get('max_lon', None), elem.attrib.get('max_lat', None)))
-            else:
-                changesets.append((elem.attrib['id'], elem.attrib.get('uid', None),   elem.attrib['created_at'], elem.attrib.get('min_lat', None),
-                                elem.attrib.get('max_lat', None), elem.attrib.get('min_lon', None),  elem.attrib.get('max_lon', None), elem.attrib.get('closed_at', None),
-                                     elem.attrib.get('open', None), elem.attrib.get('num_changes', None), elem.attrib.get('user', None), tags))
-
-            if((parsedCount % 100000) == 0):
-                self.insertNewBatch(connection, changesets)
-                self.insertNewBatchComment(connection, comments )
-                connection.commit()
-                changesets = []
-                comments = []
-                print ("parsed %s" % ('{:,}'.format(parsedCount)))
-                print ("cumulative rate: %s/sec" % '{:,.0f}'.format(parsedCount/timedelta.total_seconds(datetime.now() - startTime)))
-
-            #clear everything we don't need from memory to avoid leaking
-            elem.clear()
-            while elem.getprevious() is not None:
-                del elem.getparent()[0]
+                    for (id,ntag,ntags,nlat,nlon,nnds,nmembers,nchangeset,ntimestamp,nuid,nversion) in ways:
+                        osm_element_history.append((id, 
+                                                ntag,  # elemnt type node, way, relation
+                                                ntags, # tags
+                                                nlat, # lat for node only
+                                                nlon, # lon for node only
+                                                nnds, # nds for way only
+                                                nmembers,# members for relation only
+                                                nchangeset, 
+                                                ntimestamp, # timestamp for all
+                                                nuid, # uid for all
+                                                nversion, # version for all
+                                                elem.tag, # action= create, modify, delete, base (for base line items)
+                                                float(nlon),
+                                                float(nlat)))
+                    for (id,ntag,ntags,nlat,nlon,nnds,nmembers,nchangeset,ntimestamp,nuid,nversion) in ways:
+                        osm_element_history.append((id, 
+                                                ntag,  # elemnt type node, way, relation
+                                                ntags, # tags
+                                                nlat, # lat for node only
+                                                nlon, # lon for node only
+                                                nnds, # nds for way only
+                                                nmembers,# members for relation only
+                                                nchangeset, 
+                                                ntimestamp, # timestamp for all
+                                                nuid, # uid for all
+                                                nversion, # version for all
+                                                elem.tag, # action= create, modify, delete, base (for base line items)
+                                                float(nlon),
+                                                float(nlat)))
+                    None
+                    nodes.clear()
+                    ways.clear()
+                    relations.clear()
+                # if self.createGeometry:
+                #     changesets.append((elem.attrib['id'], elem.attrib.get('uid', None),   elem.attrib['created_at'], elem.attrib.get('min_lat', None),
+                #                     elem.attrib.get('max_lat', None), elem.attrib.get('min_lon', None),  elem.attrib.get('max_lon', None), elem.attrib.get('closed_at', None),
+                #                          elem.attrib.get('open', None), elem.attrib.get('num_changes', None), elem.attrib.get('user', None), tags,elem.attrib.get('min_lon', None), elem.attrib.get('min_lat', None),
+                #                         elem.attrib.get('max_lon', None), elem.attrib.get('max_lat', None)))
+                # # else:
+                # #     changesets.append((elem.attrib['id'], elem.attrib.get('uid', None),   elem.attrib['created_at'], elem.attrib.get('min_lat', None),
+                # #                     elem.attrib.get('max_lat', None), elem.attrib.get('min_lon', None),  elem.attrib.get('max_lon', None), elem.attrib.get('closed_at', None),
+                # #                          elem.attrib.get('open', None), elem.attrib.get('num_changes', None), elem.attrib.get('user', None), tags))
+        except Exception as e:
+            print ("error parsing .osc.gz file")
+            print (e)
+            return sys.exit(1)  
         # Update whatever is left, then commit
-        self.insertNewBatch(connection, changesets)
-        self.insertNewBatchComment(connection, comments)
+        self.insertNewBatchReplication(connection, osm_element_history)
+        # self.insertNewBatchComment(connection, comments)
         connection.commit()
+        osm_element_history.clear()
         print ("parsing complete")
         print ("parsed {:,}".format(parsedCount))
 
@@ -247,7 +457,7 @@ class osmh():
         topdir = '{:>03}'.format(str(math.floor(sequenceNumber / 1000000))) #format(sequenceNumber / 1000000, '000')
         subdir = '{:>03}'.format(str(math.floor((sequenceNumber / 1000) % 1000))) # format((sequenceNumber / 1000) % 1000, '000')
         fileNumber = '{:>03}'.format(str(sequenceNumber % 1000)) # format(sequenceNumber % 1000, '000')
-        fileUrl = BASE_REPL_URL + topdir + '/' + subdir + '/' + fileNumber + '.osm.gz'
+        fileUrl = BASE_REPL_URL + topdir + '/' + subdir + '/' + fileNumber + '.osc.gz'
         print ("opening replication file at " + fileUrl)
         
         try:
@@ -265,11 +475,11 @@ class osmh():
     def doReplication(self, connection):
         cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
         try:
-            cursor.execute('LOCK TABLE osm_changeset_state IN ACCESS EXCLUSIVE MODE NOWAIT')
+            cursor.execute('LOCK TABLE osm_element_history_state IN ACCESS EXCLUSIVE MODE NOWAIT')
         except psycopg2.OperationalError as e:
             print ("error getting lock on state table. Another process might be running")
             return 1
-        cursor.execute('select * from osm_changeset_state')
+        cursor.execute('select * from osm_element_history_state')
         dbStatus = cursor.fetchone()
         lastDbSequence = dbStatus['last_sequence']
         timestamp = None
@@ -284,7 +494,7 @@ class osmh():
         if(lastDbSequence == -1):
             print ("replication state not initialized. You must set the sequence number first.")
             return 1
-        cursor.execute('update osm_changeset_state set update_in_progress = 1')
+        cursor.execute('update osm_element_history_state set update_in_progress = 0')
         connection.commit()
         print("latest sequence from the database: " + str(lastDbSequence))
 
@@ -292,10 +502,11 @@ class osmh():
         #at the end of this method to unlock the database or an error will forever leave it locked
         returnStatus = 0
         try:
-            serverState = yaml.load(urllib2.urlopen(BASE_REPL_URL + "state.yaml"))
-            lastServerSequence = serverState['sequence']
+            serverState = yaml.load(urllib2.urlopen(BASE_REPL_URL + "state.txt"))
+            print ("serverState",serverState.split(' ')[0].split('=')[1])
+            lastServerSequence = int(serverState.split(' ')[0].split('=')[1])
             print ("got sequence")
-            lastServerTimestamp = serverState['last_run']
+            lastServerTimestamp = serverState.split(' ')[1].split('=')[1]
             print( "last timestamp on server: " + str(lastServerTimestamp))
         except Exception as e:
             print ("error retrieving server state file. Bailing on replication")
@@ -309,7 +520,7 @@ class osmh():
                     currentSequence = lastDbSequence + 1
                     while(currentSequence <= lastServerSequence):
                         self.parseFile(connection, self.fetchReplicationFile(currentSequence), True)
-                        cursor.execute('update osm_changeset_state set last_sequence = %s', (currentSequence,))
+                        cursor.execute('update osm_element_history_state set last_sequence = %s', (currentSequence,))
                         connection.commit()
                         currentSequence += 1
                     timestamp = lastServerTimestamp
@@ -318,7 +529,7 @@ class osmh():
                 print ("error during replication")
                 print (e)
                 returnStatus = 2
-        cursor.execute('update osm_changeset_state set update_in_progress = 0, last_timestamp = %s', (timestamp,))
+        cursor.execute('update osm_element_history_state set update_in_progress = 0, last_timestamp = %s', (timestamp,))
         connection.commit()
         return returnStatus
 
@@ -355,10 +566,13 @@ md = osmh(args.createGeometry)
 #     md.createTables(conn)
 
 psycopg2.extras.register_hstore(conn)
+# relation/60337
+# print ('node log lat',md.getWayRelationLonLat('relation',60337))
 
-# if(args.doReplication):
-#     returnStatus = md.doReplication(conn)
-#     sys.exit(returnStatus)
+# sys.exit(1)
+if(args.doReplication):
+    returnStatus = md.doReplication(conn)
+    sys.exit(returnStatus)
 
 if not (args.fileName is None):
     if args.createGeometry:
