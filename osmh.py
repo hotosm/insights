@@ -25,7 +25,7 @@ try:
 except ImportError:
     bz2Support = False
 
-BASE_REPL_URL = "https://planet.openstreetmap.org/replication/minute/"
+BASE_REPL_URL = "https://planet.openstreetmap.org/replication/hour/"
 
 class osmh():
     def __init__(self, createGeometry):
@@ -430,7 +430,7 @@ class osmh():
                 members.clear()
             # if (parsedCount == 22):
             #     sys.exit(0)
-
+            # To avoid extra memory usage 
             if (elem.tag == 'node' and len(osm_element_history) >= 1000000) or (
                 elem.tag == 'way' and len(osm_element_history) >= 500000)  or (
                 elem.tag == 'relation' and len(osm_element_history) >= 300000):
@@ -575,31 +575,26 @@ if(args.doReplication):
     sys.exit(returnStatus)
 
 if not (args.fileName is None):
-    if args.createGeometry:
-        print ('parsing baseline file with geometries')
-    else:
-        print( 'parsing baseline file')
-    changesetFile = None
-    if(args.doReplication):
-        changesetFile = gzip.open(args.fileName, 'rb')
-    else:
-        if(args.fileName[-4:] == '.bz2'):
-            if(bz2Support):
-                changesetFile = BZ2File(args.fileName)
-            else:
-                print ('ERROR: bzip2 support not available. Unzip file first or install bz2file')
-                sys.exit(1)
+    print( 'parsing history file', args.fileName)
+    historyFile = None
+    if(args.fileName[-4:] == '.bz2'):
+        if(bz2Support):
+            historyFile = BZ2File(args.fileName)
         else:
-            changesetFile = open(args.fileName, 'rb')
+            print ('ERROR: bzip2 support not available. Unzip file first or install bz2file')
+            sys.exit(1)
+    else:
+        historyFile = open(args.fileName, 'rb')        
 
-    if(changesetFile != None):
-        md.parseHistoryFile(conn, changesetFile, args.doReplication)
+    if(historyFile != None):
+        md.parseHistoryFile(conn, historyFile, args.doReplication)
     else:
         print ('ERROR: no baseline file opened. Something went wrong in processing args')
         sys.exist(1)
 
     if(not args.doReplication):
-        None
+        None 
+        ## TODO: create constraint based on a parameter 
         #cursor = conn.cursor()
         # print ('creating constraints')
         #cursor.execute(queries.createConstraints)
@@ -616,4 +611,4 @@ timeCost = endTime - beginTime
 
 print( 'Processing time cost is ', timeCost)
 
-print ('All done. Enjoy your (meta)data!')
+print ('All done. Enjoy your Historical OSM Elements!')

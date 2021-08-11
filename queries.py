@@ -46,7 +46,7 @@ CREATE TABLE public.osm_element_history (
 	"version" int8 NULL,
 	"action" varchar NULL,
 	country varchar NULL,
-	CONSTRAINT osm_element_history_un UNIQUE (id,"version")
+	CONSTRAINT osm_element_history_un UNIQUE (id,"version","type")
 );'''
 
 initStateTable = '''INSERT INTO osm_changeset_state VALUES (-1, null, 0)''';
