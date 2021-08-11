@@ -387,6 +387,9 @@ class osmh():
 
                     if (elem.tag == 'node' and  elem.attrib.get('lat', 0) == 0):
                         action = 'delete'
+
+                        # TODO way is ddeleted when its visibility is false and no properties inside it 
+
                 # print ('elem.attrib',elem.attrib)
                 # tags = {}
                 # for tagElem in elem.iterchildren(tag='tag'):
@@ -506,7 +509,7 @@ class osmh():
             print ("serverState",serverState.split(' ')[0].split('=')[1])
             lastServerSequence = int(serverState.split(' ')[0].split('=')[1])
             print ("got sequence")
-            lastServerTimestamp = serverState.split(' ')[1].split('=')[1]
+            lastServerTimestamp = serverState.split(' ')[1].split('=')[1].replace("\\", "")
             print( "last timestamp on server: " + str(lastServerTimestamp))
         except Exception as e:
             print ("error retrieving server state file. Bailing on replication")
