@@ -235,7 +235,7 @@ class osmh():
                 if elem.tag == 'way':
                     tags1 = {key: value[:] for key, value in tags.items()}
                     nds1 = nds[:]        
-                    (lon,lat) = md.getWayRelationLonLat('way',elem.attrib.get('id', 0))        
+                    (lon,lat) = (0,0) # TODO: separate getting geo info for way and relation to another process using  md.getWayRelationLonLat('way',elem.attrib.get('id', 0))        
                     ways.append((elem.attrib.get('id', None), 
                                                 elem.tag,  # elemnt type node, way, relation
                                                 tags1, # tags
@@ -255,7 +255,7 @@ class osmh():
                 if elem.tag == 'relation':
                     tags1 = {key: value[:] for key, value in tags.items()}
                     members1 = members[:]         
-                    (lon,lat) = md.getWayRelationLonLat('relation',elem.attrib.get('id', 0))    
+                    (lon,lat) = (0,0) # TODO: separate getting geo info for way and relation to another process using  md.getWayRelationLonLat('way',elem.attrib.get('id', 0))        
                     relations.append((elem.attrib.get('id', None), 
                                                 elem.tag,  # elemnt type node, way, relation
                                                 tags1, # tags
