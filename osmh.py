@@ -494,7 +494,7 @@ class osmh():
         if(lastDbSequence == -1):
             print ("replication state not initialized. You must set the sequence number first.")
             return 1
-        cursor.execute('update osm_element_history_state set update_in_progress = 0')
+        cursor.execute('update osm_element_history_state set update_in_progress = 1')
         connection.commit()
         print("latest sequence from the database: " + str(lastDbSequence))
 
