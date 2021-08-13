@@ -25,12 +25,9 @@ try:
 except ImportError:
     bz2Support = False
 
-BASE_REPL_URL = "https://planet.openstreetmap.org/replication/hour/"
-
 class osmh():
     def __init__(self, createGeometry):
         self.createGeometry = createGeometry
-
 
     def truncateTables(self, connection):
         print('truncating tables')
@@ -377,18 +374,21 @@ class osmh():
             if elem.tag == 'node' or elem.tag == 'way' or elem.tag == 'relation':
                 # print ('node tags',tags)
                 parsedElements = parsedElements + 1
-                if ("base" in args.fileName):
-                    action = 'base'
+                
+                if (elem.attrib.get('version', None) == '1'):
+                    action = 'create'
                 else:
-                    if (elem.attrib.get('version', None) == '1'):
-                        action = 'create'
-                    else:
-                        action = 'modify'
+                    action = 'modify'
 
-                    if (elem.tag == 'node' and  elem.attrib.get('lat', 0) == 0):
-                        action = 'delete'
+                if (elem.tag == 'node' and  elem.attrib.get('lat', 0) == 0):
+                    action = 'delete'
 
-                        # TODO way is ddeleted when its visibility is false and no properties inside it 
+                if (elem.tag == 'way' and  len(nds) == 0 and len(tags) == 0):
+                    action = 'delete'
+
+                if (elem.tag == 'relation' and  len(members) == 0 and len(tags) == 0):
+                    action = 'delete'
+                    # TODO way is deleted when its visibility is false and no properties inside it
 
                 # print ('elem.attrib',elem.attrib)
                 # tags = {}
@@ -543,7 +543,7 @@ beginTime = datetime.now()
 endTime = None
 timeCost = None
 
-argParser = argparse.ArgumentParser(description="Parse OSM Changeset metadata into a database")
+argParser = argparse.ArgumentParser(description="Parse OSM elements history into a PG database")
 argParser.add_argument('-t', '--trunc', action='store_true', default=False, dest='truncateTables', help='Truncate existing tables (also drops indexes)')
 argParser.add_argument('-c', '--create', action='store_true', default=False, dest='createTables', help='Create tables')
 argParser.add_argument('-H', '--host', action='store', dest='dbHost', help='Database hostname')
@@ -555,12 +555,14 @@ argParser.add_argument('-f', '--file', action='store', dest='fileName', help='OS
 argParser.add_argument('-r', '--replicate', action='store_true', dest='doReplication', default=False, help='Apply a replication file to an existing database')
 argParser.add_argument('-g', '--geometry', action='store_true', dest='createGeometry', default=False, help='Build geometry of changesets (requires postgis)')
 argParser.add_argument('-re', '--region', action='store', dest='region', help='Region of the parsed file')
+argParser.add_argument('-freq', '--frequancy', action='store', dest='frequancy',default='hour', help='Replication frequancy, (default = hour), minute, day are the other values and should consider the sequance in osm_element_history_state table')
 
 args = argParser.parse_args()
 
 conn = psycopg2.connect(database=args.dbName, user=args.dbUser, password=args.dbPass, host=args.dbHost, port=args.dbPort)
 
-
+BASE_REPL_URL = "https://planet.openstreetmap.org/replication/"+args.frequancy+"/"
+print("BASE_REPL_URL",BASE_REPL_URL)
 md = osmh(args.createGeometry)
 # if args.truncateTables:
 #     md.truncateTables(conn)
