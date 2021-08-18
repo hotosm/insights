@@ -207,7 +207,7 @@ The replication run in OSMH is a process of readingthe OSM changes (day,hour or 
 
 The `last_sequance` needs to match the `-freq` and updated in the database before running the OSMH replication. The `last_sequance` value can be learned from the OSM Planet replication for the start date/time where you need the replication to start. For example, in our practical run we used _5 Aug 2021_ as the end date in the osmium time filter so as showb below, the best last sequance would be 004/657/384 so the value of 4657384 can be updated in the `osm_element_history_state` table.
 
-![OSMH flow chart](/resources/last-sequance-example.png)
+![OSMH flow chart](/resources/last-sequance-example.PNG)
 
     python3 osmh.py -d DB_NAME -u DB_USER -p DB_PASSWORD -H DB_HOST -r -freq minute
 
@@ -222,7 +222,7 @@ It took 3 minutes and 11 seconds to load the replications for 1 hour of OSM Plan
 
 Loading multiple countries historical OSM elements would need going through Pre-processing the historical file for the new country and OSHM run steps.
 
-![OSMH flow chart](/resources/flowchart.png)
+![OSMH flow chart](/resources/flowchart.PNG)
 
 ### TODO: Indexes creation
 
