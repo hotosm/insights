@@ -1,0 +1,186 @@
+BASE_REPL_URL https://planet.openstreetmap.org/replication/minute/
+latest timestamp in database: 2021-08-18 07:59:18
+latest sequence from the database: 4676213
+serverState 4676272
+got sequence
+last timestamp on server: 2021-08-18T08:59:28Z
+latest sequence on OSM server: 4676272
+server has new sequence. commencing replication
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/214.osc.gz
+parsing complete
+parsed 17,737
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/215.osc.gz
+parsing complete
+parsed 15,894
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/216.osc.gz
+parsing complete
+parsed 10,488
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/217.osc.gz
+parsing complete
+parsed 21,896
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/218.osc.gz
+parsing complete
+parsed 23,128
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/219.osc.gz
+parsing complete
+parsed 7,879
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/220.osc.gz
+parsing complete
+parsed 12,289
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/221.osc.gz
+parsing complete
+parsed 13,689
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/222.osc.gz
+parsing complete
+parsed 9,323
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/223.osc.gz
+parsing complete
+parsed 11,702
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/224.osc.gz
+parsing complete
+parsed 12,247
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/225.osc.gz
+parsing complete
+parsed 11,537
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/226.osc.gz
+parsing complete
+parsed 13,168
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/227.osc.gz
+parsing complete
+parsed 11,746
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/228.osc.gz
+parsing complete
+parsed 5,284
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/229.osc.gz
+parsing complete
+parsed 11,327
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/230.osc.gz
+parsing complete
+parsed 17,863
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/231.osc.gz
+parsing complete
+parsed 8,320
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/232.osc.gz
+parsing complete
+parsed 7,269
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/233.osc.gz
+parsing complete
+parsed 9,650
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/234.osc.gz
+parsing complete
+parsed 8,401
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/235.osc.gz
+parsing complete
+parsed 14,741
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/236.osc.gz
+parsing complete
+parsed 15,444
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/237.osc.gz
+parsing complete
+parsed 18,012
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/238.osc.gz
+parsing complete
+parsed 34,829
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/239.osc.gz
+parsing complete
+parsed 10,443
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/240.osc.gz
+parsing complete
+parsed 15,114
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/241.osc.gz
+parsing complete
+parsed 16,247
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/242.osc.gz
+parsing complete
+parsed 9,538
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/243.osc.gz
+parsing complete
+parsed 15,770
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/244.osc.gz
+parsing complete
+parsed 15,258
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/245.osc.gz
+parsing complete
+parsed 12,323
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/246.osc.gz
+parsing complete
+parsed 15,030
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/247.osc.gz
+parsing complete
+parsed 11,666
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/248.osc.gz
+parsing complete
+parsed 16,393
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/249.osc.gz
+parsing complete
+parsed 7,923
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/250.osc.gz
+parsing complete
+parsed 10,339
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/251.osc.gz
+parsing complete
+parsed 12,558
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/252.osc.gz
+parsing complete
+parsed 15,960
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/253.osc.gz
+parsing complete
+parsed 26,858
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/254.osc.gz
+parsing complete
+parsed 21,551
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/255.osc.gz
+parsing complete
+parsed 24,580
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/256.osc.gz
+parsing complete
+parsed 9,643
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/257.osc.gz
+parsing complete
+parsed 12,019
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/258.osc.gz
+parsing complete
+parsed 8,901
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/259.osc.gz
+parsing complete
+parsed 16,820
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/260.osc.gz
+parsing complete
+parsed 10,134
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/261.osc.gz
+parsing complete
+parsed 5,939
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/262.osc.gz
+parsing complete
+parsed 14,154
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/263.osc.gz
+parsing complete
+parsed 12,877
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/264.osc.gz
+parsing complete
+parsed 18,324
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/265.osc.gz
+parsing complete
+parsed 13,732
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/266.osc.gz
+parsing complete
+parsed 8,499
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/267.osc.gz
+parsing complete
+parsed 11,140
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/268.osc.gz
+parsing complete
+parsed 25,377
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/269.osc.gz
+parsing complete
+parsed 11,428
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/270.osc.gz
+parsing complete
+parsed 10,072
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/271.osc.gz
+parsing complete
+parsed 15,037
+opening replication file at https://planet.openstreetmap.org/replication/minute/004/676/272.osc.gz
+parsing complete
+parsed 22,628
+finished with replication. Clearing status record

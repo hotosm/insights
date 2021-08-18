@@ -132,3 +132,98 @@ This program is free software: you can redistribute it and/or modify it under th
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 
 See the GNU Affero General Public License for more details: http://www.gnu.org/licenses/agpl.txt
+
+
+OSMH
+=========
+
+OSMH is an extension for the below repository ChangesetMD to load and scan replications for the historical versions of OSM elements. It uses the same technique and python libraries used by ChangesetMD. OSMH will build the historical OSM elements for specific countires of interests and will maintain the new changes using cron job based on the minute, hour or day changes from the OSM Planet replications.
+
+OSMH requires the same initial setup as ChangesetMD.
+
+8 GB RAM and 2vCPU cloud instance is used in practical implementation of running OSMH
+## OSMH Setup
+
+OSMH can parse specific country .osm(.bz2) files and inserts OSM elements into a single table called `osm_element_history`. This table would contain all nodes, ways and relations in the .osm file
+
+### Pre-processing the historical file (pbf)
+
+From geofabrik internal server the historical files (.osh.pbf) are available for download. Internal geofabrik server would require log in using OSM authentication. Using `curl` geofabrik (.osh.pbf) can be downloaded by passing the cookie as below example, it would download Kenya historical file 
+
+    curl -b 'gf_download_oauth=REPLACE_WITH_YOUR_COOKIE_VALUE' -O https://osm-internal.download.geofabrik.de/africa/kenya-internal.osh.pbf
+
+Then the country osh.pbf file is passed to [osmimum tool time filter](https://docs.osmcode.org/osmium/latest/osmium-time-filter.html), the time filter can have any start and end date of your interests. In the following example, we using the start date as the date of [first OSM changeset](https://www.openstreetmap.org/api/0.6/changeset/1) and end date as begining of 5 Aug 2021, make sure the the osh.pbf file has the end date when you check it in [geofabrik](https://osm-internal.download.geofabrik.de/africa/kenya.html) where the last modification of the file is declared
+
+It took ~1 hour to run osmium time filter for Kenya as it is .osh.pdf file was around 260 MB at the time of implementation.
+
+For bigger files such as Tanzania .osh.pbf (~ 1 GB), it took ~3 hours.
+
+
+    osmium time-filter -o kenya-history.osm.bz2 kenya-internal.osh.pbf 2005-04-09T00:00:00Z 2021-08-05T00:00:00Z
+
+osmium output file is an .osm.bz2 [OSM XML standard file](https://wiki.openstreetmap.org/wiki/OSM_XML) that includes historical OSM elements with their references, meaning the nodes are listed first, then ways and each way has a list of refereced nodes then relations with list of referenced memeber. 
+When running osmium notice the WARNING message as osmium time filter supports OSM historical files.
+
+![osmium time filter](/resources/osmium-time-filter-example.PNG)
+
+### OSMH Loading Run
+
+Before running OSMH, make sure you have the `osm_element_history` table created in your DB, same one as the ChangesetMD DB. The primary key wil be the OSM element ID combined with the type and version as same OSM element ID will have multiple versions and we noticed that same ID might be for a node/way/relations.
+Here is an example for a [node](https://www.openstreetmap.org/api/0.6/node/279096140/history) and a [way](https://www.openstreetmap.org/api/0.6/way/279096140/history) with the same ID # 279096140
+
+
+    CREATE TABLE public.osm_element_history (
+        id int8 NULL,
+        "type" varchar NULL,
+        tags hstore NULL,
+        lat numeric(9, 7) NULL,
+        lon numeric(10, 7) NULL,
+        nds _int8 NULL,
+        members _int8 NULL,
+        changeset int8 NULL,
+        "timestamp" timestamp NULL,
+        uid int8 NULL,
+        "version" int8 NULL,
+        "action" varchar NULL,
+        country varchar NULL,
+        CONSTRAINT osm_element_history_un UNIQUE (id, version,"type")
+    );
+
+Then OSMH can parse osmium output file using the following command and insert OSM elements into `osm_element_history` table.
+
+    python3 osmh.py -d DB_NAME -u DB_USER -p DB_PASSWORD -H DB_HOST -re Kenya -f ../kenya-history.osm.bz2
+
+Since the table doesn't have any indexes at this stage, parsing is faster than situation where the table has indexes as PG insert command would insert the date and update the index for each batch of insert.
+
+### OSMH Replication Run
+
+The replication run in OSMH is a process of readingthe OSM changes (day,hour or minute) frequancy and continue inserting the new OSM elements history in to the same `osm_element_history`. Same technique as the one used in ChangesetMD, OSMH has a `osm_element_history_state` table which has the latest sequance of the OSM Planet replication.
+
+    CREATE TABLE public.osm_element_history_state (
+	last_sequence int8 NULL,
+	last_timestamp timestamp NULL,
+	update_in_progress int2 NULL
+    );
+
+The `last_sequance` needs to match the `-freq` and updated in the database before running the OSMH replication. The `last_sequance` value can be learned from the OSM Planet replication for the start date/time where you need the replication to start. For example, in our practical run we used _5 Aug 2021_ as the end date in the osmium time filter so as showb below, the best last sequance would be 004/657/384 so the value of 4657384 can be updated in the `osm_element_history_state` table.
+
+![OSMH flow chart](/resources/last-sequance-example.png)
+
+    python3 osmh.py -d DB_NAME -u DB_USER -p DB_PASSWORD -H DB_HOST -r -freq minute
+
+OSM replication run would grab all OSM change files starting from `osm_element_history_state` table `last_sequance` till the last sequance in OSM Planet replication. Here is where the last OSM Plant minute replication can be found (https://planet.openstreetmap.org/replication/minute/state.txt)
+
+After the OSMH replication run finishes, it can be scheduled as cron job to update the OSM element history up to the minutly frequancy.
+
+OSM replication run would get all countries OSM eleemnts history as of the start sequance so you wil end up with OSM elements from countries that you didn't load into the `osm_element_history` table yet. You can maintain them in the table and when OSMH loading run again for a new country of interest you would need to run it till your specific date. Like in our  practical implementation, it is _5 Aug 2021_
+
+It took 3 minutes and 11 seconds to load the replications for 1 hour of OSM Planet minutes repliation. Log file shows the start and end sequances example in the resources folder.
+### OSMH Data Flow
+
+Loading multiple countries historical OSM elements would need going through Pre-processing the historical file for the new country and OSHM run steps.
+
+![OSMH flow chart](/resources/flowchart.png)
+
+### TODO: Indexes creation
+
+
