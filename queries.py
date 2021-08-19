@@ -71,3 +71,14 @@ SELECT AddGeometryColumn('osm_changeset','geom', 4326, 'POLYGON', 2);
 createGeomIndex = '''
 CREATE INDEX changeset_geom_gist ON osm_changeset USING GIST(geom);
 '''
+
+createBoundaries = '''
+CREATE TABLE if not exists public.boundaries (
+	name_en varchar NULL,
+	admin_level int4 NULL,
+	tags hstore NULL,
+	boundary geometry NULL,
+	priority bool NULL
+);
+CREATE UNIQUE INDEX if not exists boundaries_nameen_idx ON public.boundaries USING btree (name_en);
+'''

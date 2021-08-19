@@ -6,4 +6,7 @@ changesets-120912.osm
 .idea/workspace.xml
 *.log
 *.osm
+*.geojson
+*.geojson.gz
 run.bat
+OSMB-92b499783a132b16489ed81a7b278321f8777fa0.geojson.gz

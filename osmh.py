@@ -58,6 +58,42 @@ class osmh():
         
         cursor.close()
 
+    def insertBoundary(self, connection, boundary):
+
+
+        polyFile = urllib2.urlopen(boundary)
+        data = polyFile.read()
+        polyFile.close()
+
+        poly = data.decode('utf-8')
+        # print('data',poly.split('\n'))
+        
+        points = ''
+        for l in poly.split('\n'):
+            # print(l)
+            if len(l.split(' ')) > 2:
+                # print (float(l.split(' ')[3]),float(l.split(' ')[6]))
+                points = points + str(float(l.split(' ')[3])) + ' ' + str(float(l.split(' ')[6])) + ','
+            None
+        points = points[0:-1]
+        postgisPolygon = 'POLYGON(('+points+'))'
+        # print (postgisPolygon)
+        countryName = boundary.split('/')[len(boundary.split('/'))-1][0:-5].capitalize()
+
+        # print (countryName)
+        cursor = connection.cursor()
+
+        cursor.execute(queries.createBoundaries)
+        connection.commit()
+
+        sql = "INSERT INTO boundaries (name_en,boundary,priority) values ('"+countryName+"','"+postgisPolygon+"'::geometry,true) ON CONFLICT (name_en) DO update set boundary = '"+postgisPolygon+"'::geometry"
+        # print (sql)
+        cursor.execute(sql)
+        connection.commit()
+        cursor.close()
+        print(countryName, 'inserted into boundaries table')
+
+
     def insertNewBatchReplication(self, connection, data_arr):
         cursor = connection.cursor()
         
@@ -552,6 +588,7 @@ argParser.add_argument('-u', '--user', action='store', dest='dbUser', default=No
 argParser.add_argument('-p', '--password', action='store', dest='dbPass', default=None, help='Database password')
 argParser.add_argument('-d', '--database', action='store', dest='dbName', help='Target database', required=True)
 argParser.add_argument('-f', '--file', action='store', dest='fileName', help='OSM baseline or history file, baseline file should contain base keyword in its name')
+argParser.add_argument('-b', '--boundary', action='store', dest='boundary', help='GeoJSON file for the boundaries. it support .gz zipped files')
 argParser.add_argument('-r', '--replicate', action='store_true', dest='doReplication', default=False, help='Apply a replication file to an existing database')
 argParser.add_argument('-g', '--geometry', action='store_true', dest='createGeometry', default=False, help='Build geometry of changesets (requires postgis)')
 argParser.add_argument('-re', '--region', action='store', dest='region', help='Region of the parsed file')
@@ -579,8 +616,21 @@ if(args.doReplication):
     returnStatus = md.doReplication(conn)
     sys.exit(returnStatus)
 
+if not (args.boundary is None):
+    try:
+        if(args.boundary[-5:] == '.poly'):
+            None
+            print( 'Parsing boundary .poly file', args.boundary)
+            md.insertBoundary(conn, args.boundary)    
+            sys.exit(0)      
+    except Exception as e:
+        print ("error during loading boundary")
+        print (e)
+        sys.exit(1)
+    None
+
 if not (args.fileName is None):
-    print( 'parsing history file', args.fileName)
+    print( 'Parsing history file', args.fileName)
     historyFile = None
     if(args.fileName[-4:] == '.bz2'):
         if(bz2Support):
