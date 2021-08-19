@@ -177,19 +177,26 @@ OSMH can parse osmium output file using the following command and insert OSM ele
 
 Since the table doesn't have any indexes at this stage, parsing is faster than situation where the table has indexes as PG insert command would insert the date and update the index for each batch of insert.
 
-Practically, it took ~3 hours to load Tanzania osm.bz2 history file (~ 2GB)
+Practically, it took 42 minutes to load Somalia osm.bz2 history file (~ 297MB)
 
 ### OSMH Replication Run
 
 The replication run in OSMH is a process of readingthe OSM changes (day,hour or minute) frequancy and continue inserting the new OSM elements history in to the same `osm_element_history`. Same technique as the one used in ChangesetMD, OSMH has a `osm_element_history_state` table which has the latest sequance of the OSM Planet replication.
 
-    CREATE TABLE public.osm_element_history_state (
-	last_sequence int8 NULL,
-	last_timestamp timestamp NULL,
-	update_in_progress int2 NULL
-    );
+`osm_element_history_state` will be created when do the OSMH loading run if it is not already exists in the DB.
 
-The `last_sequance` needs to match the `-freq` and updated in the database before running the OSMH replication. The `last_sequance` value can be learned from the OSM Planet replication for the start date/time where you need the replication to start. For example, in our practical run we used _5 Aug 2021_ as the end date in the osmium time filter so as showb below, the best last sequance would be 004/657/384 so the value of 4657384 can be updated in the `osm_element_history_state` table.
+#### Get Countries Boundaries Before OSMH Replication Run
+
+Before OSMH Replication Run, you need to setup the countries boundaries table. OSMH has an option to load the geofabrik .poly files and constructs the boundaries into (MULTI)POLYGON and insert them into the `boundaries` table. OSMH would craete the `boundaries` table if it is not already exists. It is required to load your country of interests before you run the OSMH replication run as the replication run gets the OSM element country based on the `boundaries` table.
+
+For example, here is the command to load Afghanistan boundaries.
+
+Under /resources/boundaries.txt, you can find a list of all commands for all countries defined in geofabrik.
+
+    python3 osmh.py  -d DB_NAME -u DB_USER -p DB_PASSWORD -P DB_PORT -H DB_HOST -b http://download.geofabrik.de/asia/afghanistan.poly
+
+#### Setup Last Sequence Manually
+The `last_sequance` needs to match the `-freq` and updated in the database before running the OSMH replication. The `last_sequance` value can be learned from the OSM Planet replication for the start date/time where you need the replication to start. For example, in our practical run we used _5 Aug 2021_ as the end date in the osmium time filter so as showb below, the best minutely last sequance would be 004/657/384 so the value of 4657384 can be updated in the `osm_element_history_state` table.
 
 ![OSMH flow chart](/resources/last-sequance-example.PNG)
 
@@ -197,9 +204,10 @@ The `last_sequance` needs to match the `-freq` and updated in the database befor
 
 OSM replication run would grab all OSM change files starting from `osm_element_history_state` table `last_sequance` till the last sequance in OSM Planet replication. Here is where the last OSM Plant minute replication can be found (https://planet.openstreetmap.org/replication/minute/state.txt)
 
+
 After the OSMH replication run finishes, it can be scheduled as cron job to update the OSM element history up to the minutly frequancy.
 
-OSM replication run would get all countries OSM eleemnts history as of the start sequance so you wil end up with OSM elements from countries that you didn't load into the `osm_element_history` table yet. You can maintain them in the table and when OSMH loading run again for a new country of interest you would need to run it till your specific date. Like in our  practical implementation, it is _5 Aug 2021_
+OSM replication run would get all countries OSM eleemnts history as of the start sequance so you wil end up with OSM elements from countries that you didn't load into the `osm_element_history` table yet. You can maintain them in the table and when OSMH loading run again for a new country of interest you would need to run it till your specific date. Like in our practical implementation, it is _5 Aug 2021_
 
 It took 3 minutes and 11 seconds to load the replications for 1 hour of OSM Planet minutes repliation. Log file shows the start and end sequances example in the resources folder.
 ### OSMH Data Flow

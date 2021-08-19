@@ -338,13 +338,13 @@ class osmh():
                                                 float(nlon),
                                                 float(nlat)))
 
-                    for (id,ntag,ntags,nlat,nlon,nnds,nmembers,nchangeset,ntimestamp,nuid,nversion) in ways:
+                    for (id,ntag,ntags,nlat,nlon,wnds,nmembers,nchangeset,ntimestamp,nuid,nversion) in ways:
                         osm_element_history.append((id, 
                                                 ntag,  # elemnt type node, way, relation
                                                 ntags, # tags
                                                 nlat, # lat for node only
                                                 nlon, # lon for node only
-                                                nnds, # nds for way only
+                                                wnds, # nds for way only
                                                 nmembers,# members for relation only
                                                 nchangeset, 
                                                 ntimestamp, # timestamp for all
@@ -386,6 +386,14 @@ class osmh():
             print (e)
             return sys.exit(1)  
         # Update whatever is left, then commit
+
+        # #TODO: get lat lon for way and relation
+        # for elm in osm_element_history:
+            
+        #     (id,ntag,ntags,nlat,nlon,nnds,nmembers,nchangeset,ntimestamp,nuid,nversion,action,lot,lat) = elm
+        #     if ntag =='way':
+        #         print('nnds[0]',nnds[0])
+
         self.insertNewBatchReplication(connection, osm_element_history)
         # self.insertNewBatchComment(connection, comments)
         connection.commit()
