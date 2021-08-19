@@ -168,32 +168,16 @@ When running osmium notice the WARNING message as osmium time filter supports OS
 
 ### OSMH Loading Run
 
-Before running OSMH, make sure you have the `osm_element_history` table created in your DB, same one as the ChangesetMD DB. The primary key wil be the OSM element ID combined with the type and version as same OSM element ID will have multiple versions and we noticed that same ID might be for a node/way/relations.
+When running OSMH to load osm.bz2, OSMH craetes the `osm_element_history` table if not already exists, and creates `osm_element_history_state` which is needed for the replication run. The primary key for `osm_element_history` wil be the OSM element ID combined with the type and version as same OSM element ID will have multiple versions and we noticed that same ID might be for a node/way/relations.
 Here is an example for a [node](https://www.openstreetmap.org/api/0.6/node/279096140/history) and a [way](https://www.openstreetmap.org/api/0.6/way/279096140/history) with the same ID # 279096140
 
-
-    CREATE TABLE public.osm_element_history (
-        id int8 NULL,
-        "type" varchar NULL,
-        tags hstore NULL,
-        lat numeric(9, 7) NULL,
-        lon numeric(10, 7) NULL,
-        nds _int8 NULL,
-        members _int8 NULL,
-        changeset int8 NULL,
-        "timestamp" timestamp NULL,
-        uid int8 NULL,
-        "version" int8 NULL,
-        "action" varchar NULL,
-        country varchar NULL,
-        CONSTRAINT osm_element_history_un UNIQUE (id, version,"type")
-    );
-
-Then OSMH can parse osmium output file using the following command and insert OSM elements into `osm_element_history` table.
+OSMH can parse osmium output file using the following command and insert OSM elements into `osm_element_history` table.
 
     python3 osmh.py -d DB_NAME -u DB_USER -p DB_PASSWORD -H DB_HOST -re Kenya -f ../kenya-history.osm.bz2
 
 Since the table doesn't have any indexes at this stage, parsing is faster than situation where the table has indexes as PG insert command would insert the date and update the index for each batch of insert.
+
+Practically, it took ~3 hours to load Tanzania osm.bz2 history file (~ 2GB)
 
 ### OSMH Replication Run
 

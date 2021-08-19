@@ -32,7 +32,7 @@ CREATE TABLE osm_changeset_state (
 );
 '''
 createOsmHistoryTable = '''
-CREATE TABLE public.osm_element_history (
+CREATE TABLE if not EXISTS public.osm_element_history (
 	id int8 NULL,
 	"type" varchar NULL,
 	tags hstore NULL,
@@ -46,8 +46,16 @@ CREATE TABLE public.osm_element_history (
 	"version" int8 NULL,
 	"action" varchar NULL,
 	country varchar NULL,
-	CONSTRAINT osm_element_history_un UNIQUE (id,"version","type")
-);'''
+	CONSTRAINT osm_element_history_un UNIQUE (id, version,"type")
+);
+
+CREATE TABLE if not EXISTS public.osm_element_history_state (
+	last_sequence int8 NULL,
+	last_timestamp timestamp NULL,
+	update_in_progress int2 NULL
+);
+
+'''
 
 initStateTable = '''INSERT INTO osm_changeset_state VALUES (-1, null, 0)''';
 
@@ -82,3 +90,4 @@ CREATE TABLE if not exists public.boundaries (
 );
 CREATE UNIQUE INDEX if not exists boundaries_nameen_idx ON public.boundaries USING btree (name_en);
 '''
+

@@ -102,7 +102,7 @@ class osmh():
         cursor.execute(queries.createBoundaries)
         connection.commit()
 
-        sql = "INSERT INTO boundaries (name_en,boundary,priority) values ('"+countryName+"','"+postgisPolygon+"'::geometry,true) ON CONFLICT (name_en) DO update set boundary = '"+postgisPolygon+"'::geometry"
+        sql = "INSERT INTO boundaries (name_en,boundary,priority) values ('"+countryName+"','"+postgisPolygon+"'::geometry,false) ON CONFLICT (name_en) DO update set boundary = '"+postgisPolygon+"'::geometry"
         # print (sql)
         cursor.execute(sql)
         connection.commit()
@@ -115,7 +115,7 @@ class osmh():
         
         sql = '''INSERT INTO public.osm_element_history
                 (id, "type", tags, lat, lon, nds, members, changeset, "timestamp", uid, "version", "action",country)
-                values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,(select g.name from public.geoboundaries g where ST_CONTAINS(st_setsrid(g.boundary,4326),st_setsrid ('POINT(%s %s)'::geometry,4326)) limit 1)) ON CONFLICT DO NOTHING'''
+                values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,(select g.name_en from public.boundaries g where ST_CONTAINS(st_setsrid(g.boundary,4326),st_setsrid ('POINT(%s %s)'::geometry,4326)) limit 1)) ON CONFLICT DO NOTHING'''
         
         psycopg2.extras.execute_batch(cursor, sql, data_arr)
         
@@ -393,7 +393,7 @@ class osmh():
         print ("parsing complete")
         print ("parsed {:,}".format(parsedCount))
 
-    def parseHistoryFile(self, connection, changesetFile, doReplication):
+    def parseHistoryFile(self, connection, changesetFile):
         parsedCount = 0
         parsedElements = 0
         startTime = datetime.now()
@@ -658,9 +658,13 @@ if not (args.fileName is None):
         historyFile = open(args.fileName, 'rb')        
 
     if(historyFile != None):
-        md.parseHistoryFile(conn, historyFile, args.doReplication)
+        print ('Checking Osm Element History Table and State Table')
+        cursor = conn.cursor()
+        cursor.execute(queries.createOsmHistoryTable)
+        conn.commit()
+        md.parseHistoryFile(conn, historyFile)
     else:
-        print ('ERROR: no baseline file opened. Something went wrong in processing args')
+        print ('ERROR: no file opened. Something went wrong in processing args')
         sys.exist(1)
 
     if(not args.doReplication):
