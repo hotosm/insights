@@ -68,16 +68,32 @@ class osmh():
         poly = data.decode('utf-8')
         # print('data',poly.split('\n'))
         
-        points = ''
+        points = {}
+        currentPoly = 0
+        i = 1
         for l in poly.split('\n'):
             # print(l)
-            if len(l.split(' ')) > 2:
-                # print (float(l.split(' ')[3]),float(l.split(' ')[6]))
-                points = points + str(float(l.split(' ')[3])) + ' ' + str(float(l.split(' ')[6])) + ','
-            None
-        points = points[0:-1]
-        postgisPolygon = 'POLYGON(('+points+'))'
-        # print (postgisPolygon)
+            arr= l.split(' ')
+            if len(arr) == 7:
+                # print (float(arr[3]),float(arr[6]))
+                points[str(currentPoly)] = points[str(currentPoly)] + str(float(arr[3])) + ' ' + str(float(arr[6])) + ','
+            
+            else:
+                if (len(arr) == 1) and arr[0] == str(i):
+                    i = i + 1
+                    currentPoly = int(arr[0]) - 1
+                    points[str(currentPoly)] =''
+        # print('points',points)
+        postgisPolygon = ''
+        if (len(points) == 1):
+            postgisPolygon = 'POLYGON(('+points["0"][0:-1]+'))'
+        else:
+            postgisPolygon = 'MULTIPOLYGON(('
+            for i in range(0,len(points)) :
+                postgisPolygon = postgisPolygon + '('+points[str(i)][0:-1] + '),'
+                None
+            postgisPolygon = postgisPolygon[0:-1] + '))'
+        # print ('postgisPolygon',postgisPolygon)
         countryName = boundary.split('/')[len(boundary.split('/'))-1][0:-5].capitalize()
 
         # print (countryName)
