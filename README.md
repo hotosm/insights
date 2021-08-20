@@ -181,7 +181,9 @@ Practically, it took 42 minutes to load Somalia osm.bz2 history file (~ 297MB), 
 
 ![Philippines history file parsing time](/resources/Philippines-parsing.PNG)
 
+However, it tool ~9.5 hours to load Indonesia history file .osm.bz2 (~4 GB) as shown below 
 
+![Indonesia history file parsing time](/resources/Indonesia-parsing.PNG)
 ### OSMH Replication Run
 
 The replication run in OSMH is a process of readingthe OSM changes (day,hour or minute) frequancy and continue inserting the new OSM elements history in to the same `osm_element_history`. Same technique as the one used in ChangesetMD, OSMH has a `osm_element_history_state` table which has the latest sequance of the OSM Planet replication.
@@ -215,10 +217,26 @@ OSM replication run would get all countries OSM eleemnts history as of the start
 It took 3 minutes and 11 seconds to load the replications for 1 hour of OSM Planet minutes repliation. Log file shows the start and end sequances example in the resources folder.
 ### OSMH Data Flow
 
-Loading multiple countries historical OSM elements would need going through Pre-processing the historical file for the new country and OSHM run steps.
+Loading multiple countries historical OSM elements would need going through Pre-processing the historical file for the new country and OSHM run steps again.
 
 ![OSMH flow chart](/resources/flowchart.PNG)
 
-### TODO: Indexes creation
 
+### TODO: find country for later added OSM country history
 
+TDC...
+### Indexes Creation
+
+After loading you country of interest, you can build postgres indexes on the `osm_element_history` table to support the types of queries you are interested to run.
+
+    CREATE INDEX osm_element_history_timestamp_idx ON public.osm_element_history ("timestamp");
+    CREATE INDEX osm_element_history_country_idx ON public.osm_element_history (country);
+    CREATE INDEX osm_element_history_tags_idx ON public.osm_element_history USING GIN (tags);
+    CREATE INDEX osm_element_history_changeset_idx ON public.osm_element_history (changeset);
+
+[GIN index](https://www.postgresql.org/docs/current/textsearch-indexes.html) are recommended for the tags as tags might be the main search fields in queries. GIN indexes are bigger than GiST but they are recommneded.
+Bear in mind that after creating the indexes, you can run OSMH loading but it would take longer time as postgres would need to updae the indexes after inserting new OSM Elemnts.
+
+## TODO: Sample Queries on the OSM Element History
+
+TBC...
