@@ -178,6 +178,7 @@ OSMH can parse osmium output file using the following command and insert OSM ele
 Since the table doesn't have any indexes at this stage, parsing is faster than situation where the table has indexes as PG insert command would insert the date and update the index for each batch of insert.
 
 Practically, it took 42 minutes to load Somalia osm.bz2 history file (~ 297MB), 3.5 hours to load Philippines history file (~1.5 GB) - pic below. 
+
 ![Philippines history file parsing time](/resources/Philippines-parsing.PNG)
 
 

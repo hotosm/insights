@@ -497,7 +497,7 @@ class osmh():
             if (elem.tag == 'node' and len(osm_element_history) >= 1000000) or (
                 elem.tag == 'way' and len(osm_element_history) >= 500000)  or (
                 elem.tag == 'relation' and len(osm_element_history) >= 300000):
-                print ('Parsed',parsedElements,'item')
+                print ('Parsed',parsedElements,'elements')
                 self.insertNewBatch(connection, osm_element_history)
                 connection.commit()
                 endTime = datetime.now()
@@ -509,12 +509,12 @@ class osmh():
             while elem.getprevious() is not None:
                 del elem.getparent()[0]
         
-        print ('Committing last batch',parsedCount)
+        print ('Committing last batch',len(osm_element_history),' elements')
         self.insertNewBatch(connection, osm_element_history)
         connection.commit()
         osm_element_history.clear()  
         print ("parsing complete, it was started:",startTime)
-        print ("parsed {:,}".format(parsedCount),'Ended on: ',datetime.now())
+        print ("parsed {:,}".format(parsedElements),'Ended on: ',datetime.now())
 
     def fetchReplicationFile(self, sequenceNumber):
         topdir = '{:>03}'.format(str(math.floor(sequenceNumber / 1000000))) #format(sequenceNumber / 1000000, '000')
