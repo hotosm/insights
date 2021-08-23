@@ -193,9 +193,20 @@ class ChangesetMD():
             lastServerTimestamp = serverState['last_run']
             print( "last timestamp on server: " + str(lastServerTimestamp))
         except Exception as e:
-            print ("error retrieving server state file. Bailing on replication")
-            print (e)
-            returnStatus = 2
+            try:
+                # try the tmp file as osm planet might use it 
+                serverState = yaml.load(urllib2.urlopen(BASE_REPL_URL + "state.yaml.tmp"))
+                lastServerSequence = serverState['sequence']
+                print ("got sequence")
+                lastServerTimestamp = serverState['last_run']
+                print( "last timestamp on server: " + str(lastServerTimestamp))
+            except Exception as e:
+                print ("error retrieving server state file. Bailing on replication")
+                print (e)
+                returnStatus = 2
+            # print ("error retrieving server state file. Bailing on replication")
+            # print (e)
+            # returnStatus = 2
         else:
             try:
                 print("latest sequence on OSM server: " + str(lastServerSequence))
