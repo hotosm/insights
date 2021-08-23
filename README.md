@@ -212,7 +212,9 @@ OSM replication run would grab all OSM change files starting from `osm_element_h
 
 After the OSMH replication run finishes, it can be scheduled as cron job to update the OSM element history up to the minutly frequancy.
 
-OSM replication run would get all countries OSM eleemnts history as of the start sequance so you wil end up with OSM elements from countries that you didn't load into the `osm_element_history` table yet. You can maintain them in the table and when OSMH loading run again for a new country of interest you would need to run it till your specific date. Like in our practical implementation, it is _5 Aug 2021_
+It is recommended to run the replocations on the hour frequancy to catch up from  the loading date (_5 Aug 2021_ in our practical exmaples) to the last hour. Then run the replications on the minute frequancy to catch up to last minute. Additionally, the hour frequancy replication file use acceptable amound of memory. Practically, it used ~30% of the 8 GB RAM device.
+
+OSM replication run would get all countries OSM eleemnts history as of the start sequance so you wil end up with OSM elements from countries that you didn't load their history into the `osm_element_history` table yet. You can maintain them in the table and when OSMH loading run again for a new country of interest you would need to filter the osh.pbf using osmium time filter till your specific date. Like in our practical implementation, it is _5 Aug 2021_
 
 It took 3 minutes and 11 seconds to load the replications for 1 hour of OSM Planet minutes repliation. Log file shows the start and end sequances example in the resources folder.
 ### OSMH Data Flow
@@ -227,15 +229,17 @@ Loading multiple countries historical OSM elements would need going through Pre-
 TDC...
 ### Indexes Creation
 
-After loading you country of interest, you can build postgres indexes on the `osm_element_history` table to support the types of queries you are interested to run.
+After loading you country of interest, you can build DB indexes on the `osm_element_history` table to support the types of queries you are interested to run. Postgres supports building indexes concurrently to avoid locking the table so OSMG replication run can continue while indexes are being created.
 
-    CREATE INDEX osm_element_history_timestamp_idx ON public.osm_element_history ("timestamp");
-    CREATE INDEX osm_element_history_country_idx ON public.osm_element_history (country);
-    CREATE INDEX osm_element_history_tags_idx ON public.osm_element_history USING GIN (tags);
-    CREATE INDEX osm_element_history_changeset_idx ON public.osm_element_history (changeset);
+    CREATE INDEX CONCURRENTLY osm_element_history_timestamp_idx ON public.osm_element_history ("timestamp");
+    CREATE INDEX CONCURRENTLY osm_element_history_country_idx ON public.osm_element_history (country);
+    CREATE INDEX CONCURRENTLY osm_element_history_tags_idx ON public.osm_element_history USING GIN (tags);
+    CREATE INDEX CONCURRENTLY osm_element_history_changeset_idx ON public.osm_element_history (changeset);
+    CREATE INDEX CONCURRENTLY osm_element_history_action_idx ON public.osm_element_history ("action");
+
 
 [GIN index](https://www.postgresql.org/docs/current/textsearch-indexes.html) are recommended for the tags as tags might be the main search fields in queries. GIN indexes are bigger than GiST but they are recommneded.
-Bear in mind that after creating the indexes, you can run OSMH loading but it would take longer time as postgres would need to updae the indexes after inserting new OSM Elemnts.
+Bear in mind that after creating the indexes, you can run OSMH loading but it would take longer time as postgres would need to updae the indexes after inserting new OSM Elemnts. Practically, the time needed to load an osm.bz2 file has increased 5 times
 
 ## TODO: Sample Queries on the OSM Element History
 

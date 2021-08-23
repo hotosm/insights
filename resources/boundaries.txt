@@ -1,3 +1,4 @@
+python3 osmh.py -d DB_NAME -d DB_USER -p DB_PASSWORD -H DB_HOST -P DB_PORT -b http://download.geofabrik.de/russia.poly
 python3 osmh.py -d DB_NAME -d DB_USER -p DB_PASSWORD -H DB_HOST -P DB_PORT -b http://download.geofabrik.de/asia/afghanistan.poly
 python3 osmh.py -d DB_NAME -d DB_USER -p DB_PASSWORD -H DB_HOST -P DB_PORT -b http://download.geofabrik.de/asia/armenia.poly
 python3 osmh.py -d DB_NAME -d DB_USER -p DB_PASSWORD -H DB_HOST -P DB_PORT -b http://download.geofabrik.de/asia/azerbaijan.poly
@@ -25,7 +26,6 @@ python3 osmh.py -d DB_NAME -d DB_USER -p DB_PASSWORD -H DB_HOST -P DB_PORT -b ht
 python3 osmh.py -d DB_NAME -d DB_USER -p DB_PASSWORD -H DB_HOST -P DB_PORT -b http://download.geofabrik.de/asia/north-korea.poly
 python3 osmh.py -d DB_NAME -d DB_USER -p DB_PASSWORD -H DB_HOST -P DB_PORT -b http://download.geofabrik.de/asia/pakistan.poly
 python3 osmh.py -d DB_NAME -d DB_USER -p DB_PASSWORD -H DB_HOST -P DB_PORT -b http://download.geofabrik.de/asia/philippines.poly
-python3 osmh.py -d DB_NAME -d DB_USER -p DB_PASSWORD -H DB_HOST -P DB_PORT -b http://download.geofabrik.de/asia/russia-asian-part.poly
 python3 osmh.py -d DB_NAME -d DB_USER -p DB_PASSWORD -H DB_HOST -P DB_PORT -b http://download.geofabrik.de/asia/south-korea.poly
 python3 osmh.py -d DB_NAME -d DB_USER -p DB_PASSWORD -H DB_HOST -P DB_PORT -b http://download.geofabrik.de/asia/sri-lanka.poly
 python3 osmh.py -d DB_NAME -d DB_USER -p DB_PASSWORD -H DB_HOST -P DB_PORT -b http://download.geofabrik.de/asia/syria.poly
