@@ -265,7 +265,7 @@ class osmh():
                 
                 if elem.tag == 'node':
                    
-                    tags1 = {key: value[:] for key, value in tags.items()}
+                    tags1 = None if len(tags) == 0 else  {key: value[:] for key, value in tags.items()}
                     nodes.append((elem.attrib.get('id', None), 
                                                 elem.tag,  # elemnt type node, way, relation
                                                 tags1, # tags
@@ -282,8 +282,8 @@ class osmh():
                                                 ))
                     tags.clear()
                 if elem.tag == 'way':
-                    tags1 = {key: value[:] for key, value in tags.items()}
-                    nds1 = nds[:]        
+                    tags1 = None if len(tags) == 0 else {key: value[:] for key, value in tags.items()}
+                    nds1 = None if len(nds) == 0 else  nds[:]        
                     (lon,lat) = (0,0) # TODO: separate getting geo info for way and relation to another process using  md.getWayRelationLonLat('way',elem.attrib.get('id', 0))        
                     ways.append((elem.attrib.get('id', None), 
                                                 elem.tag,  # elemnt type node, way, relation
@@ -302,8 +302,8 @@ class osmh():
                     tags.clear()
                     nds.clear()
                 if elem.tag == 'relation':
-                    tags1 = {key: value[:] for key, value in tags.items()}
-                    members1 = members[:]         
+                    tags1 = None if len(tags) == 0 else {key: value[:] for key, value in tags.items()}
+                    members1 = None if len(members) == 0 else members[:]         
                     (lon,lat) = (0,0) # TODO: separate getting geo info for way and relation to another process using  md.getWayRelationLonLat('way',elem.attrib.get('id', 0))        
                     relations.append((elem.attrib.get('id', None), 
                                                 elem.tag,  # elemnt type node, way, relation
@@ -472,9 +472,9 @@ class osmh():
                 #     if member.attrib.get('ref', None) != None:
                 #         members.append(int(member.attrib['ref'])) 
                  
-                tags1 = {key: value[:] for key, value in tags.items()}
-                nds1 = nds[:]
-                members1 = members[:]
+                tags1 = None if len(tags) == 0 else {key: value[:] for key, value in tags.items()}
+                nds1 =  None if len(nds) == 0 else nds[:]
+                members1 =  None if len(members) == 0 else members[:]
                 osm_element_history.append((elem.attrib.get('id', None), 
                                             elem.tag,  # elemnt type node, way, relation
                                             tags1, # tags
