@@ -1,3 +1,4 @@
+python3 osmh.py -d DB_NAME -d DB_USER -p DB_PASSWORD -H DB_HOST -P DB_PORT -b http://download.geofabrik.de/central-america/panama.poly
 python3 osmh.py -d DB_NAME -d DB_USER -p DB_PASSWORD -H DB_HOST -P DB_PORT -b http://download.geofabrik.de/russia.poly
 python3 osmh.py -d DB_NAME -d DB_USER -p DB_PASSWORD -H DB_HOST -P DB_PORT -b http://download.geofabrik.de/asia/afghanistan.poly
 python3 osmh.py -d DB_NAME -d DB_USER -p DB_PASSWORD -H DB_HOST -P DB_PORT -b http://download.geofabrik.de/asia/armenia.poly
