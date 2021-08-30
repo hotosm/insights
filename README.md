@@ -141,6 +141,13 @@ OSMH is an extension for the below repository ChangesetMD to load and scan repli
 
 OSMH requires the same initial setup as ChangesetMD.
 
+Additional dependencies setup:
+
+* `pip install pyyaml`
+* `pip install lxml`
+* `create extension hstore` against the Postgres database
+* `pip install bz2file`
+
 8 GB RAM and 2vCPU cloud instance is used in practical implementation of running OSMH
 ## OSMH Setup
 
