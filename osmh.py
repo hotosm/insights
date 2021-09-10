@@ -494,6 +494,9 @@ class osmh():
                 nds.clear()
                 members.clear()
                 listSize += sys.getsizeof(osm_element_history[len(osm_element_history)-1])
+                listSize += sys.getsizeof(members1)
+                listSize += sys.getsizeof(nds1)
+                listSize += sys.getsizeof(tags1)
 
             # if (parsedCount == 22):
             #     sys.exit(0)

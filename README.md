@@ -243,7 +243,7 @@ After loading you country of interest, you can build DB indexes on the `osm_elem
     CREATE INDEX CONCURRENTLY osm_element_history_changeset_idx ON public.osm_element_history (changeset);
     CREATE INDEX CONCURRENTLY osm_element_history_action_idx ON public.osm_element_history ("action");
     CREATE INDEX CONCURRENTLY osm_element_history_tags_idx ON public.osm_element_history USING GIST (tags);
-    CREATE INDEX CONCURRENTLY osm_element_history_geom_gist__idx ON public.osm_element_history using GIST (geom);
+    CREATE INDEX CONCURRENTLY osm_element_history_geom_gist_idx ON public.osm_element_history using GIST (geom);
 
 
 GIST index creation might take long time based on the  `osm_element_history` size. Practically, it took around +36 hours when the `osm_element_history` table size was 200 GB.
