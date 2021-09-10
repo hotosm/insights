@@ -148,7 +148,7 @@ Additional dependencies setup:
 * `create extension hstore` against the Postgres database
 * `pip install bz2file`
 
-8 GB RAM and 2vCPU cloud instance is used in practical implementation of running OSMH
+4 GB RAM and 2vCPU cloud instance (AWS c5a.large) is used in practical implementation of running OSMH
 ## OSMH Setup
 
 OSMH can parse specific country .osm(.bz2) files and inserts OSM elements into a single table called `osm_element_history`. This table would contain all nodes, ways and relations in the .osm file
