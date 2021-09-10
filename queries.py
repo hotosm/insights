@@ -39,13 +39,14 @@ CREATE TABLE if not EXISTS public.osm_element_history (
 	lat numeric(9, 7) NULL,
 	lon numeric(10, 7) NULL,
 	nds _int8 NULL,
-	members _int8 NULL,
+	members text[][] NULL,
 	changeset int8 NULL,
 	"timestamp" timestamp NULL,
 	uid int8 NULL,
 	"version" int8 NULL,
 	"action" varchar NULL,
 	country varchar NULL,
+	geom geometry NULL,
 	CONSTRAINT osm_element_history_un UNIQUE (id, version,"type")
 );
 
@@ -86,7 +87,8 @@ CREATE TABLE if not exists public.boundaries (
 	admin_level int4 NULL,
 	tags hstore NULL,
 	boundary geometry NULL,
-	priority bool NULL
+	priority bool NULL,
+	loaded bool NULL
 );
 CREATE UNIQUE INDEX if not exists boundaries_nameen_idx ON public.boundaries USING btree (name_en);
 '''

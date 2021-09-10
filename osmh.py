@@ -260,7 +260,7 @@ class osmh():
                     continue
 
                 if elem.tag == 'member':
-                    members.append(int(elem.attrib['ref'])) 
+                    members.append([elem.attrib['ref'],elem.attrib['type'],elem.attrib.get('role','unknown')]) 
                     continue    
                 
                 if elem.tag == 'node':
@@ -353,7 +353,7 @@ class osmh():
                                                 elem.tag, # action= create, modify, delete, base (for base line items)
                                                 float(nlon),
                                                 float(nlat)))
-                    for (id,ntag,ntags,nlat,nlon,nnds,nmembers,nchangeset,ntimestamp,nuid,nversion) in ways:
+                    for (id,ntag,ntags,nlat,nlon,nnds,nmembers,nchangeset,ntimestamp,nuid,nversion) in relations:
                         osm_element_history.append((id, 
                                                 ntag,  # elemnt type node, way, relation
                                                 ntags, # tags
@@ -400,7 +400,7 @@ class osmh():
         osm_element_history.clear()
         print ("parsing complete")
         print ("parsed {:,}".format(parsedCount))
-
+        
     def parseHistoryFile(self, connection, changesetFile):
         parsedCount = 0
         parsedElements = 0
@@ -411,7 +411,7 @@ class osmh():
         osm_element_history = []
         tags = {}
         nds = []
-        members = []
+        members = [] 
         beginTime  = datetime.now()
         for action, elem in context:
             # print('tags ',tags,'osm_element_history',osm_element_history )  
@@ -428,7 +428,8 @@ class osmh():
                 continue
 
             if elem.tag == 'member':
-                members.append(int(elem.attrib['ref'])) 
+                members.append([elem.attrib['ref'],elem.attrib['type'],elem.attrib.get('role','unknown')]) 
+                # <member type="way" ref="148653924" role="forward"/>
                 continue
 
             if elem.tag == 'node' or elem.tag == 'way' or elem.tag == 'relation':
