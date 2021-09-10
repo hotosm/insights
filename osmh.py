@@ -507,7 +507,9 @@ class osmh():
             # if (parsedCount == 22):
             #     sys.exit(0)
             # To avoid extra memory usage 
-            if listSize >= 200000000 : # if the size of the list reaches ~ 400 MB
+            if (listSize >= 200000000) or (
+                elem.tag == 'relation' and len(osm_element_history) >= 10000
+            ) : # if the size of the list reaches ~ 400 MB
                 print ('Parsed',parsedElements,'elements')
                 print('with osm_element_history siz=',listSize, 'bytes')
                 self.insertNewBatch(connection, osm_element_history)
