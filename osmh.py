@@ -432,11 +432,13 @@ class osmh():
             
             if elem.tag == 'nd':
                 nds.append(int(elem.attrib['ref'])) 
+                listSize += sys.getsizeof(nds[len(nds)-1])
                 continue
 
             if elem.tag == 'member':
                 members.append([elem.attrib['ref'],elem.attrib['type'],elem.attrib.get('role','unknown')]) 
                 # <member type="way" ref="148653924" role="forward"/>
+                listSize += sys.getsizeof(members[len(members)-1])
                 continue
 
             if elem.tag == 'node' or elem.tag == 'way' or elem.tag == 'relation':
@@ -500,8 +502,6 @@ class osmh():
                 nds.clear()
                 members.clear()
                 listSize += sys.getsizeof(osm_element_history[len(osm_element_history)-1])
-                listSize += sys.getsizeof(members1)
-                listSize += sys.getsizeof(nds1)
                 listSize += sys.getsizeof(tags1)
 
             # if (parsedCount == 22):
