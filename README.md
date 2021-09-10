@@ -219,7 +219,7 @@ OSM replication run would grab all OSM change files starting from `osm_element_h
 
 After the OSMH replication run finishes, it can be scheduled as cron job to update the OSM element history up to the minutly frequancy.
 
-It is recommended to run the replocations on the hour frequancy to catch up from  the loading date (_5 Aug 2021_ in our practical exmaples) to the last hour. Then run the replications on the minute frequancy to catch up to last minute. Additionally, the hour frequancy replication file use acceptable amound of memory. Practically, it used ~30% of the 8 GB RAM device.
+It is recommended to run the replocations on the hour frequancy to catch up from  the loading date (_5 Aug 2021_ in our practical exmaples) to the last hour. Then run the replications on the minute frequancy to catch up to last minute. Additionally, the hour frequancy replication file use acceptable amound of memory. Practically, it used ~30% of the 4 GB RAM device.
 
 OSM replication run would get all countries OSM eleemnts history as of the start sequance so you wil end up with OSM elements from countries that you didn't load their history into the `osm_element_history` table yet. You can maintain them in the table and when OSMH loading run again for a new country of interest you would need to filter the osh.pbf using osmium time filter till your specific date. Like in our practical implementation, it is _5 Aug 2021_
 

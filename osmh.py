@@ -114,8 +114,8 @@ class osmh():
         cursor = connection.cursor()
         
         sql = '''INSERT INTO public.osm_element_history
-                (id, "type", tags, lat, lon, nds, members, changeset, "timestamp", uid, "version", "action",country)
-                values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,(select g.name_en from public.boundaries g where ST_CONTAINS(st_setsrid(g.boundary,4326),st_setsrid ('POINT(%s %s)'::geometry,4326)) limit 1)) ON CONFLICT DO NOTHING'''
+                (id, "type", tags, lat, lon, nds, members, changeset, "timestamp", uid, "version", "action",country,geom)
+                values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,(select g.name_en from public.boundaries g where ST_CONTAINS(st_setsrid(g.boundary,4326),st_setsrid ('POINT(%s %s)'::geometry,4326)) limit 1),st_setsrid ('POINT(%s %s)'::geometry,4326)) ON CONFLICT DO NOTHING'''
         
         psycopg2.extras.execute_batch(cursor, sql, data_arr)
         
@@ -269,8 +269,8 @@ class osmh():
                     nodes.append((elem.attrib.get('id', None), 
                                                 elem.tag,  # elemnt type node, way, relation
                                                 tags1, # tags
-                                                elem.attrib.get('lat', 0), # lat for node only
-                                                elem.attrib.get('lon', 0), # lon for node only
+                                                elem.attrib.get('lat', None), # lat for node only
+                                                elem.attrib.get('lon', None), # lon for node only
                                                 None, # nds for way only
                                                 None,# members for relation only
                                                 elem.attrib.get('changeset', None), 
@@ -284,7 +284,7 @@ class osmh():
                 if elem.tag == 'way':
                     tags1 = None if len(tags) == 0 else {key: value[:] for key, value in tags.items()}
                     nds1 = None if len(nds) == 0 else  nds[:]        
-                    (lon,lat) = (0,0) # TODO: separate getting geo info for way and relation to another process using  md.getWayRelationLonLat('way',elem.attrib.get('id', 0))        
+                    (lon,lat) = (None,None) # TODO: separate getting geo info for way and relation to another process using  md.getWayRelationLonLat('way',elem.attrib.get('id', 0))        
                     ways.append((elem.attrib.get('id', None), 
                                                 elem.tag,  # elemnt type node, way, relation
                                                 tags1, # tags
@@ -304,7 +304,7 @@ class osmh():
                 if elem.tag == 'relation':
                     tags1 = None if len(tags) == 0 else {key: value[:] for key, value in tags.items()}
                     members1 = None if len(members) == 0 else members[:]         
-                    (lon,lat) = (0,0) # TODO: separate getting geo info for way and relation to another process using  md.getWayRelationLonLat('way',elem.attrib.get('id', 0))        
+                    (lon,lat) = (None,None) # TODO: separate getting geo info for way and relation to another process using  md.getWayRelationLonLat('way',elem.attrib.get('id', 0))        
                     relations.append((elem.attrib.get('id', None), 
                                                 elem.tag,  # elemnt type node, way, relation
                                                 tags1, # tags
@@ -336,6 +336,8 @@ class osmh():
                                                 nversion, # version for all
                                                 elem.tag, # action= create, modify, delete, base (for base line items)
                                                 float(nlon),
+                                                float(nlat),
+                                                float(nlon),
                                                 float(nlat)))
 
                     for (id,ntag,ntags,nlat,nlon,wnds,nmembers,nchangeset,ntimestamp,nuid,nversion) in ways:
@@ -351,8 +353,10 @@ class osmh():
                                                 nuid, # uid for all
                                                 nversion, # version for all
                                                 elem.tag, # action= create, modify, delete, base (for base line items)
-                                                float(nlon),
-                                                float(nlat)))
+                                                0,
+                                                0,
+                                                0,
+                                                0))
                     for (id,ntag,ntags,nlat,nlon,nnds,nmembers,nchangeset,ntimestamp,nuid,nversion) in relations:
                         osm_element_history.append((id, 
                                                 ntag,  # elemnt type node, way, relation
@@ -366,8 +370,10 @@ class osmh():
                                                 nuid, # uid for all
                                                 nversion, # version for all
                                                 elem.tag, # action= create, modify, delete, base (for base line items)
-                                                float(nlon),
-                                                float(nlat)))
+                                                0,
+                                                0,
+                                                0,
+                                                0))
                     None
                     nodes.clear()
                     ways.clear()
@@ -480,8 +486,8 @@ class osmh():
                 osm_element_history.append((elem.attrib.get('id', None), 
                                             elem.tag,  # elemnt type node, way, relation
                                             tags1, # tags
-                                            elem.attrib.get('lat', 0), # lat for node only
-                                            elem.attrib.get('lon', 0), # lon for node only
+                                            elem.attrib.get('lat', None), # lat for node only
+                                            elem.attrib.get('lon', None), # lon for node only
                                             nds1, # nds for way only
                                             members1,# members for relation only
                                             elem.attrib.get('changeset', None), 
@@ -501,7 +507,7 @@ class osmh():
             # if (parsedCount == 22):
             #     sys.exit(0)
             # To avoid extra memory usage 
-            if listSize >= 400000000 : # if the size of the list reaches ~ 400 MB
+            if listSize >= 200000000 : # if the size of the list reaches ~ 400 MB
                 print ('Parsed',parsedElements,'elements')
                 print('with osm_element_history siz=',listSize, 'bytes')
                 self.insertNewBatch(connection, osm_element_history)
