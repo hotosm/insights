@@ -497,7 +497,7 @@ class osmh():
             # To avoid extra memory usage 
             if (elem.tag == 'node' and len(osm_element_history) >= 1000000) or (
                 elem.tag == 'way' and len(osm_element_history) >= 500000)  or (
-                elem.tag == 'relation' and len(osm_element_history) >= 300000):
+                elem.tag == 'relation' and len(osm_element_history) >= 100000):
                 print ('Parsed',parsedElements,'elements')
                 self.insertNewBatch(connection, osm_element_history)
                 connection.commit()
