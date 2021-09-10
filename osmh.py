@@ -51,8 +51,8 @@ class osmh():
         cursor = connection.cursor()
         
         sql = '''INSERT INTO public.osm_element_history
-                (id, "type", tags, lat, lon, nds, members, changeset, "timestamp", uid, "version", "action",country)
-                values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING'''
+                (id, "type", tags, lat, lon, nds, members, changeset, "timestamp", uid, "version", "action",country,geom)
+                values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,st_setsrid ('POINT(%s %s)'::geometry,4326)) ON CONFLICT DO NOTHING'''
         
         psycopg2.extras.execute_batch(cursor, sql, data_arr)
         
@@ -497,7 +497,10 @@ class osmh():
                                             elem.attrib.get('uid', None), # uid for all
                                             elem.attrib.get('version', None), # version for all
                                             action, # action= create, modify, delete, base (for base line items)
-                                            args.region))
+                                            args.region,
+                                            float(elem.attrib.get('lat', 0)), # lat for node only
+                                            float(elem.attrib.get('lon', 0)), # lon for node only
+                                            ))
                 tags.clear()
                 nds.clear()
                 members.clear()
