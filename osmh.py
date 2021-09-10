@@ -495,11 +495,18 @@ class osmh():
             # if (parsedCount == 22):
             #     sys.exit(0)
             # To avoid extra memory usage 
+           
+            listSize = 0
+            for n in osm_element_history:
+                listSize += sys.getsizeof(n)
+            listSize += sys.getsizeof(osm_element_history)
+
             if (elem.tag == 'node' and len(osm_element_history) >= 1000000) or (
                 elem.tag == 'way' and len(osm_element_history) >= 500000)  or (
                 elem.tag == 'relation' and len(osm_element_history) >= 10000 or 
-                sys.getsizeof(osm_element_history) >= 10000000):
-                print ('Parsed',parsedElements,'elements','with osm_element_history siz=', sys.getsizeof(osm_element_history), 'bytes')
+                sys.getsizeof(osm_element_history) >= 200000000): # if the size of the list reaches 200 MB
+                print ('Parsed',parsedElements,'elements')
+                print('with osm_element_history siz=',listSize, 'bytes')
                 self.insertNewBatch(connection, osm_element_history)
                 connection.commit()
                 endTime = datetime.now()
