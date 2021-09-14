@@ -230,6 +230,20 @@ Loading multiple countries historical OSM elements would need going through Pre-
 
 ![OSMH flow chart](/resources/flowchart.PNG)
 
+### Indexes Creation
+
+After loading you country of interest, you can build DB indexes on the `osm_element_history` table to support the types of queries you are interested to run. Postgres supports building indexes concurrently to avoid locking the table so OSMG replication run can continue while indexes are being created.
+
+    CREATE INDEX CONCURRENTLY osm_element_history_timestamp_idx ON public.osm_element_history ("timestamp");
+    CREATE INDEX CONCURRENTLY osm_element_history_country_idx ON public.osm_element_history (country);
+    CREATE INDEX CONCURRENTLY osm_element_history_changeset_idx ON public.osm_element_history (changeset);
+    CREATE INDEX CONCURRENTLY osm_element_history_action_idx ON public.osm_element_history ("action");
+    CREATE INDEX CONCURRENTLY osm_element_history_tags_idx ON public.osm_element_history USING GIST (tags);
+    CREATE INDEX CONCURRENTLY osm_element_history_geom_gist_idx ON public.osm_element_history using GIST (geom);
+
+
+GIST index creation might take long time based on the  `osm_element_history` size. Practically, it took around +36 hours when the `osm_element_history` table size was 200 GB.
+Bear in mind that after creating the indexes, you can run OSMH loading but it would take longer time as postgres would need to updae the indexes after inserting new OSM Elemnts. Practically, the time needed to load an osm.bz2 file has increased 5 times
 
 ### Updating OSM element history 
 
@@ -303,20 +317,6 @@ For relations, the lat, lon and geom (point) of the first member (way or node) t
     and "action" != 'delete'
     and "timestamp"  >= '2021-08-05';
 
-### Indexes Creation
-
-After loading you country of interest, you can build DB indexes on the `osm_element_history` table to support the types of queries you are interested to run. Postgres supports building indexes concurrently to avoid locking the table so OSMG replication run can continue while indexes are being created.
-
-    CREATE INDEX CONCURRENTLY osm_element_history_timestamp_idx ON public.osm_element_history ("timestamp");
-    CREATE INDEX CONCURRENTLY osm_element_history_country_idx ON public.osm_element_history (country);
-    CREATE INDEX CONCURRENTLY osm_element_history_changeset_idx ON public.osm_element_history (changeset);
-    CREATE INDEX CONCURRENTLY osm_element_history_action_idx ON public.osm_element_history ("action");
-    CREATE INDEX CONCURRENTLY osm_element_history_tags_idx ON public.osm_element_history USING GIST (tags);
-    CREATE INDEX CONCURRENTLY osm_element_history_geom_gist_idx ON public.osm_element_history using GIST (geom);
-
-
-GIST index creation might take long time based on the  `osm_element_history` size. Practically, it took around +36 hours when the `osm_element_history` table size was 200 GB.
-Bear in mind that after creating the indexes, you can run OSMH loading but it would take longer time as postgres would need to updae the indexes after inserting new OSM Elemnts. Practically, the time needed to load an osm.bz2 file has increased 5 times
 
 ## TODO: Sample Queries on the OSM Element History
 
