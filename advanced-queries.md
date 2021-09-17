@@ -1,4 +1,63 @@
-### Updating OSM element history 
+# Advanced Queries
+
+In this section of the documentation, the focus is to present osm element's wrangling and queries to produce multiple insights:
+
+
+## Live Events
+
+Live events are one of the activities OSM community are contributing to, they include mapathons, map and chat events and any other event that gathers mappers to contribute through Tasking Manager. Some time a specific hash tag is used in these events and it is added in the changeset comments or in the hashtags field of a changeset.
+
+Live events insights can be queries from the `osm_element_history` table directly as they are focused on short period of time so the postgres index on the timestamp column would make the query fast. HOT TM projects normally use hashtags as "hotosm-project-PROJECT_ID" to be added in the changeset comments or hashtags field.
+
+### Total Number of Created or Modified Features
+
+The following query would return the total number of created and modified features during the live event period for specific HOT TM project(s) such as 11224 and 10042 or specific hashtag such as mapandchathour2021
+
+    select t.key,t.action, count(distinct id)
+    from (select (each(osh.tags)).key, (each(osh.tags)).value,osh.*
+    from public.osm_element_history osh
+    where osh.changeset in (select c.id 
+                            from public.osm_changeset c
+                            where c.created_at  between '2021-08-27 09:00:00' and '2021-08-27 11:00:00'
+                            and (
+                            (c.tags -> 'comment') ~~    '%hotosm-project-11224%' or (c.tags -> 'hashtags') ~~ '%hotosm-project-11224%' 
+                            or (c.tags -> 'comment') ~~ '%hotosm-project-10042%' or (c.tags -> 'hashtags') ~~ '%hotosm-project-10042%'
+                            or (c.tags -> 'comment') ~~ '%mapandchathour2021%' or (c.tags -> 'hashtags') ~~ '%mapandchathour2021%'
+                            )												
+                            )
+                            ) as t
+    group by t.key,t.action
+    order by 3 desc
+				
+### Live Events Contributors
+The following query would return the total number of contributors who have submited at least 1 changeset during the event for specific projects or hastags
+
+    select count(distinct uid) Total_contributers
+    from (select (each(osh.tags)).key, (each(osh.tags)).value,osh.*
+    from public.osm_element_history osh
+    where osh.changeset in (select c.id 
+                            from public.osm_changeset c
+                            where c.created_at between '2021-08-27 09:00:00' and '2021-08-27 11:00:00'
+                            and (
+                            (c.tags -> 'comment') ~~ '%hotosm-project-11224%' or (c.tags -> 'hashtags') ~~ '%hotosm-project-11224%' 
+                            or (c.tags -> 'comment') ~~ '%hotosm-project-10042%' or (c.tags -> 'hashtags') ~~ '%hotosm-project-10042%'
+                            or (c.tags -> 'comment') ~~ '%mapandchathour2021%' or (c.tags -> 'hashtags') ~~ '%mapandchathour2021%'
+                            )												
+                            )
+                            ) as t
+
+
+## Country Insights
+
+TBC..
+
+### OSM Building and HOT TM Mapped Building Counts
+
+
+### Country Validated Building 
+
+TBC..
+#### Updating OSM element history 
 
 In the replication run mentioned above, the nodes inserted by relication run process will have their country and geom (point) inserted directly as country will be matched with bounday table and geom is a point geometry based on lat and lon for each node.
 
