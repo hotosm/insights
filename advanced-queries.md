@@ -49,10 +49,64 @@ The following query would return the total number of contributors who have submi
 
 ## Country Insights
 
-TBC..
+The country level insight have multiple sub-levels:
+- First one on the monthy basis calulations and those and be calculated periodacily and stored as they never change such as # of buildings on specific time stamp and # of buidlings coming to OSM through Tasking Manager.
+
+Those insights can be stored in `country_insights` table as the following:
+
+    CREATE TABLE public.country_insights (
+        country varchar NOT NULL,
+        by_month timestamp NOT NULL,
+        building_count int4 NULL,
+        tm_building_count int4 NULL,
+        CONSTRAINT country_insights_pk PRIMARY KEY (country, by_month)
+    );
+
+Here is an example of the country insight table data. Below are more details about how calculations can be done
+![Example of country insight per month](/resources/country-insights-monthly-sample.PNG)
+
+- Second one is on the country level regardless of time. Such as total number of validated buildings. Below are more details about how calculations can be done. Although those would need to be re-calculated as more TM Tasks are being validated.
+
+Those insights can be stored in `country_insights2` table as the following:
+    CREATE TABLE public.country_insights2 (
+        country varchar NOT NULL,
+        validated_buildings int4 NULL
+    );
+
 
 ### OSM Building and HOT TM Mapped Building Counts
+Calculating the total number of buildings in specific country on a specific time stamp can be calculated and stored using the following update command. Make sure you have the country of interest and months (practically, we are using the end of each month) are already inserted into the `country_insights` table.
 
+For `building_count`: It is the total count of:
+- ways and relations (no nodes) (`"type" in ('way', 'relation')`)
+- and has the 'building' tag (`tags ? 'building'`)
+- in its latest version where the latest version is before the specific date (`"version" = (select max(i."version") from  public.osm_element_history i where i."type"  = internal."type"  and i.id = internal.id and i."timestamp"  <  osh.by_month)`)
+- and in specific country (`country = osh.country `)
+
+For `tm_building_count`: it is similar to `building_count` with one more condition:
+- the osm element changeset id is coming from hot_changeset (`changeset in (select id from public.hot_changeset)`)
+
+Where `hot_changeset` is a materialized view for all changesets that has "hotosm" in its hashtags field or in the comment section. The create command is listed below
+
+    update public.country_insights osh
+    set building_count = (select count(distinct internal.id ) 
+            from public.osm_element_history internal 
+            where internal.country = osh.country 
+            and internal.tags ? 'building'
+            and internal."type" in ('way', 'relation')
+            and internal."version" = (select max(i."version") from  public.osm_element_history i where i."type"  = internal."type"  and i.id = internal.id and i."timestamp"  <  osh.by_month)
+            ),
+    tm_building_count = (select count(distinct internal.id ) 
+            from public.osm_element_history internal 
+            where internal.country = osh.country 
+            and internal.tags ? 'building'
+            and internal."type" in ('way', 'relation')
+            and internal."version" = (select max(i."version") from  public.osm_element_history i where i."type"  = internal."type"  and i.id = internal.id and i."timestamp"  <  osh.by_month)
+            and internal.changeset in (select id from public.hot_changeset)
+            )
+    where by_month < now() 
+    and country = 'Tanzania'
+    and EXTRACT('year' from by_month) in (2021);
 
 ### Country Validated Building 
 
@@ -128,3 +182,34 @@ For relations, the lat, lon and geom (point) of the first member (way or node) t
     where "type" = 'relation'
     and "action" != 'delete'
     and "timestamp"  >= '2021-08-05';
+
+## `hot_changeset` Materialized View Command
+Including the indexes created on the matterialized view
+
+    create materialized view public.hot_changeset as
+    select  id, 
+            user_id, 
+            created_at, 
+            min_lat, 
+            max_lat, 
+            min_lon, 
+            max_lon, 
+            closed_at, 
+            "open", 
+            num_changes, 
+            user_name, 
+            tags, 
+            c.geom ,
+            (select g.name_en 
+            from public.boundaries g 
+            where ST_INTERSECTS( st_setsrid( g.boundary,4326) , ST_Centroid(geom))  
+            limit 1) country
+    from public.osm_changeset c
+    where (c.tags ? 'comment' and (c.tags -> 'comment') like '%hotosm%')
+    or ((c.tags -> 'hashtags')  like '%hotosm%');
+
+    CREATE INDEX hot_changeset_country_idx ON public.hot_changeset USING btree (country);
+    CREATE INDEX hot_changeset_geom_idx ON public.hot_changeset USING gist (geom);
+    CREATE INDEX hot_changeset_id_idx ON public.hot_changeset USING btree (id);
+    CREATE UNIQUE INDEX hot_changeset_id_uq_idx ON public.hot_changeset USING btree (id);
+    CREATE INDEX hot_changeset_tags_idx ON public.hot_changeset USING btree (tags);
