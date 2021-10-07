@@ -3,9 +3,9 @@
 In this section of the documentation, the focus is to present osm element's wrangling and queries to produce multiple insights:
 
 
-## Live Events
+## Mapathons
 
-Live events are one of the activities OSM community are contributing to, they include mapathons, map and chat events and any other event that gathers mappers to contribute through Tasking Manager. Some time a specific hash tag is used in these events and it is added in the changeset comments or in the hashtags field of a changeset.
+Live events are one of the activities OSM community are contributing to, they include mapathons, map and chat events and any other event that gathers mappers to contribute through Tasking Manager. Sometimes a specific hash tag is used in these events and it is added in the changeset comments or in the hashtags field of a changeset.
 
 Live events insights can be queries from the `osm_element_history` table directly as they are focused on short period of time so the postgres index on the timestamp column would make the query fast. HOT TM projects normally use hashtags as "hotosm-project-PROJECT_ID" to be added in the changeset comments or hashtags field.
 
@@ -29,7 +29,7 @@ The following query would return the total number of created and modified featur
     group by t.key,t.action
     order by 3 desc
 				
-### Live Events Contributors
+### Live Events/Mapathon Contributors
 The following query would return the total number of contributors who have submited at least 1 changeset during the event for specific projects or hastags
 
     select count(distinct uid) Total_contributers
@@ -45,6 +45,52 @@ The following query would return the total number of contributors who have submi
                             )												
                             )
                             ) as t
+### Live Event/Mapathon Detailed
+The detailed mapathon report includes 2 different datasets:
+
+- A break down per user for the created and modified features counts, the following query would return uid|username|key|action|count drill down. Same exact parameters needs to be passed in this query. Start, end timestamps, list of projects IDs and list of hashtags.
+
+    select t.uid, (select c.user_name from public.osm_changeset c where c.user_id = t.uid limit 1) username, t.key,t.action, count(distinct id) 
+    from (select (each(osh.tags)).key, (each(osh.tags)).value,osh.* 
+    from public.osm_element_history osh 
+    where osh.changeset in (select c.id 
+						from public.osm_changeset c
+						where c.created_at  between '2021-08-27 09:00:00' and '2021-08-27 11:00:00'
+						and (
+						(c.tags -> 'comment') ~~    '%hotosm-project-11224%' or (c.tags -> 'hashtags') ~~ '%hotosm-project-11224%' 
+						or (c.tags -> 'comment') ~~ '%hotosm-project-10042%' or (c.tags -> 'hashtags') ~~ '%hotosm-project-10042%'
+						or (c.tags -> 'comment') ~~ '%hotosm-project-9906%' or (c.tags -> 'hashtags') ~~ '%hotosm-project-9906%'
+						or (c.tags -> 'comment') ~~ '%hotosm-project-1381%' or (c.tags -> 'hashtags') ~~ '%hotosm-project-1381%'						
+						or (c.tags -> 'comment') ~~ '%mapandchathour2021%' or (c.tags -> 'hashtags') ~~ '%mapandchathour2021%'
+						)												
+						)
+						) as t
+    group by t.key,t.action,t.uid
+    order by 1,4,5 desc	
+
+- The second dataset is uid|username|total_buildings|mapped_tasks|validated_tasks|editors_per_user, where the total_buildings are total created and edited building features during considering the same exact parameters. mapped and validated tasks are calculated from TM database `task_history` table for the same exact timestamp and project IDs parameters using postgres functions called `editors_per_user` && `tasks_per_user` which are included in the migrate.sql file.
+
+    select t.uid,
+(select c.user_name from public.osm_changeset c where c.user_id = t.uid limit 1) username,  
+count(distinct id) total_buildings,
+public.tasks_per_user(t.uid ,'11224,10042','2021-08-27 09:00:00','2021-08-27 11:00:00','MAPPED') mapped_tasks,
+public.tasks_per_user(t.uid ,'11224,10042','2021-08-27 09:00:00','2021-08-27 11:00:00','VALIDATED') validated_tasks,
+public.editors_per_user(t.uid,'2021-08-27 09:00:00','2021-08-27 11:00:00')
+from (select (each(osh.tags)).key, (each(osh.tags)).value,osh.*
+		from public.osm_element_history osh
+		where osh.changeset in (select c.id 
+						from public.osm_changeset c
+						where c.created_at  between '2021-08-27 09:00:00' and '2021-08-27 11:00:00'
+						and (
+						(c.tags -> 'comment') ~~    '%hotosm-project-11224%' or (c.tags -> 'hashtags') ~~ '%hotosm-project-11224%' 
+						or (c.tags -> 'comment') ~~ '%hotosm-project-10042%' or (c.tags -> 'hashtags') ~~ '%hotosm-project-10042%'						
+						or (c.tags -> 'comment') ~~ '%mapandchathour2021%' or (c.tags -> 'hashtags') ~~ '%mapandchathour2021%'
+						)												
+						)
+						) as t
+    where t.key = 'building'
+    group by t.key,t.uid
+    order by 3  desc
 
 
 ## Country Insights
