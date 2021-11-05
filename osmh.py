@@ -19,7 +19,6 @@ from lxml import etree
 from datetime import datetime
 from datetime import timedelta
 from io import StringIO
-import math
 try:
     from bz2file import BZ2File
     bz2Support = True
@@ -536,10 +535,8 @@ class osmh():
         print ("parsed {:,}".format(parsedElements),'Ended on: ',datetime.now())
 
     def fetchReplicationFile(self, sequenceNumber):
-        topdir = '{:>03}'.format(str(math.floor(sequenceNumber / 1000000))) #format(sequenceNumber / 1000000, '000')
-        subdir = '{:>03}'.format(str(math.floor((sequenceNumber / 1000) % 1000))) # format((sequenceNumber / 1000) % 1000, '000')
-        fileNumber = '{:>03}'.format(str(sequenceNumber % 1000)) # format(sequenceNumber % 1000, '000')
-        fileUrl = BASE_REPL_URL + topdir + '/' + subdir + '/' + fileNumber + '.osc.gz'
+        _seq_ascii = f"{str(sequenceNumber):0>09}"
+        fileUrl = BASE_REPL_URL + _seq_ascii[0:3] + '/' + _seq_ascii[3:6] + '/' + _seq_ascii[6:] + '.osc.gz'
         print ("opening replication file at " + fileUrl)
         
         try:
