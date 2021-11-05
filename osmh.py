@@ -674,7 +674,7 @@ except psycopg2.OperationalError as err:
 
 
 
-BASE_REPL_URL = "https://planet.openstreetmap.org/replication/"+args.frequancy+"/"
+BASE_REPL_URL = "https://planet.openstreetmap.org/replication/"+args.frequency+"/"
 print("BASE_REPL_URL",BASE_REPL_URL)
 md = osmh(args.createGeometry)
 # if args.truncateTables:
