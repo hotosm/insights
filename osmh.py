@@ -1,10 +1,11 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 '''
 osmh.py should parse the osm full historical file .osm.bz2 of a specific county 
 
 @author: Omran NAJJAR
 '''
 
+import config
 import os
 import sys
 import argparse
@@ -621,26 +622,59 @@ beginTime = datetime.now()
 endTime = None
 timeCost = None
 
+"""
+TODO:
+    Remove database connection parameters from argparser since passing password
+    via argument is not secure and that makes passing the rest via args moot.
+"""
 argParser = argparse.ArgumentParser(description="Parse OSM elements history into a PG database")
 argParser.add_argument('-t', '--trunc', action='store_true', default=False, dest='truncateTables', help='Truncate existing tables (also drops indexes)')
 argParser.add_argument('-c', '--create', action='store_true', default=False, dest='createTables', help='Create tables')
-argParser.add_argument('-H', '--host', action='store', dest='dbHost', help='Database hostname')
-argParser.add_argument('-P', '--port', action='store', dest='dbPort', default=None, help='Database port')
+argParser.add_argument('-H', '--host', action='store', dest='dbHost', default=None, help='Database host FQDN or IP address')
+argParser.add_argument('-P', '--port', action='store', dest='dbPort', default='5432', help='Database port; Defaults to 5432')
 argParser.add_argument('-u', '--user', action='store', dest='dbUser', default=None, help='Database username')
 argParser.add_argument('-p', '--password', action='store', dest='dbPass', default=None, help='Database password')
-argParser.add_argument('-d', '--database', action='store', dest='dbName', help='Target database', required=True)
+argParser.add_argument('-d', '--database', action='store', dest='dbName', default=None, help='Target database')
 argParser.add_argument('-f', '--file', action='store', dest='fileName', help='OSM baseline or history file, baseline file should contain base keyword in its name')
 argParser.add_argument('-b', '--boundary', action='store', dest='boundary', help='GeoJSON file for the boundaries. it support .gz zipped files')
 argParser.add_argument('-r', '--replicate', action='store_true', dest='doReplication', default=False, help='Apply a replication file to an existing database')
 argParser.add_argument('-g', '--geometry', action='store_true', dest='createGeometry', default=False, help='Build geometry of changesets (requires postgis)')
 argParser.add_argument('-re', '--region', action='store', dest='region', help='Region of the parsed file')
-argParser.add_argument('-freq', '--frequancy', action='store', dest='frequancy',default='hour', help='Replication frequancy, (default = hour), minute, day are the other values and should consider the sequance in osm_element_history_state table')
+argParser.add_argument('-freq', '--frequency', action='store', dest='frequency',default='hour', help='Replication frequency, (default = hour), minute, day are the other values and should consider the sequance in osm_element_history_state table')
 
 args = argParser.parse_args()
 
-conn = psycopg2.connect(database=args.dbName, user=args.dbUser, password=args.dbPass, host=args.dbHost, port=args.dbPort)
+"""
+Order of precedence for database credentials:
+    1. Arguments passed to the program
+    2. ENVVAR
+    3. Hard-coded values in config.py
+"""
+database_connection_parameters = dict(
+    database = config.DATABASE_NAME if args.dbName == None else args.dbName,
+    user = config.DATABASE_USER if args.dbUser == None else args.dbUser,
+    password = config.DATABASE_PASSWORD if args.dbPass == None else args.dbPass,
+    host = config.DATABASE_HOST if args.dbHost == None else args.dbHost,
+    port = config.DATABASE_PORT if args.dbPort == None else args.dbPort,
+)
+try:
+    conn = psycopg2.connect(
+        database=database_connection_parameters['database'],
+        user=database_connection_parameters['user'],
+        password=database_connection_parameters['password'],
+        host=database_connection_parameters['host'],
+        port=database_connection_parameters['port']
+    )
+except psycopg2.OperationalError as err:
+    print("Connection error: Please recheck the connection parameters")
+    print("Current connection parameters:")
+    database_connection_parameters['password'] = f"{type(database_connection_parameters['password'])}(**VALUE REDACTED**)"
+    print(database_connection_parameters)
+    sys.exit(1)
 
-BASE_REPL_URL = "https://planet.openstreetmap.org/replication/"+args.frequancy+"/"
+
+
+BASE_REPL_URL = "https://planet.openstreetmap.org/replication/"+args.frequency+"/"
 print("BASE_REPL_URL",BASE_REPL_URL)
 md = osmh(args.createGeometry)
 # if args.truncateTables:
