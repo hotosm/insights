@@ -139,7 +139,7 @@ class ChangesetMD():
 
     def fetchReplicationFile(self, sequenceNumber):
         _seq_ascii = f"{str(sequenceNumber):0>09}"
-        fileUrl = BASE_REPL_URL + _seq_ascii[0:3] + '/' + _seq_ascii[3:6] + '/' + _seq_ascii[6:] + '.osc.gz'
+        fileUrl = BASE_REPL_URL + _seq_ascii[0:3] + '/' + _seq_ascii[3:6] + '/' + _seq_ascii[6:] + '.osm.gz'
         print ("opening replication file at " + fileUrl)
         
         try:
