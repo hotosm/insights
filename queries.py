@@ -93,3 +93,29 @@ CREATE TABLE if not exists public.boundaries (
 CREATE UNIQUE INDEX if not exists boundaries_nameen_idx ON public.boundaries USING btree (name_en);
 '''
 
+createHashtagsTables = '''
+    
+CREATE TABLE  if not exists public.hashtag (
+	id int4 NOT NULL GENERATED ALWAYS AS IDENTITY,
+	"name" varchar NOT NULL,
+	added_by int4 NULL,
+	created_at timestamp NOT NULL DEFAULT now(),
+	is_tm_project bool NULL,
+	CONSTRAINT hashtag_pk PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX hashtag_name_idx ON public.hashtag USING btree (name);
+
+CREATE TABLE  if not exists public.hashtag_stats (
+	hashtag_id int4 NOT NULL,
+	"type" varchar(1) NOT NULL,
+	start_date timestamp NOT NULL,
+	end_date timestamp NOT NULL,
+	total_new_buildings int4 NOT NULL,
+	total_uq_contributors int4 NOT NULL,
+	total_new_road_km int4 NULL,
+	calc_date timestamp NOT NULL DEFAULT now(),
+	CONSTRAINT hashtag_stats_fk FOREIGN KEY (hashtag_id) REFERENCES public.hashtag(id)
+);
+CREATE UNIQUE INDEX hashtag_stats_hashtag_id_idx ON public.hashtag_stats USING btree (hashtag_id, type, start_date, end_date);
+
+'''
