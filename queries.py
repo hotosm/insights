@@ -103,7 +103,7 @@ CREATE TABLE  if not exists public.hashtag (
 	is_tm_project bool NULL,
 	CONSTRAINT hashtag_pk PRIMARY KEY (id)
 );
-CREATE UNIQUE INDEX hashtag_name_idx ON public.hashtag USING btree (name);
+CREATE UNIQUE INDEX if not exists  hashtag_name_idx ON public.hashtag USING btree (name);
 
 CREATE TABLE  if not exists public.hashtag_stats (
 	hashtag_id int4 NOT NULL,
@@ -116,6 +116,6 @@ CREATE TABLE  if not exists public.hashtag_stats (
 	calc_date timestamp NOT NULL DEFAULT now(),
 	CONSTRAINT hashtag_stats_fk FOREIGN KEY (hashtag_id) REFERENCES public.hashtag(id)
 );
-CREATE UNIQUE INDEX hashtag_stats_hashtag_id_idx ON public.hashtag_stats USING btree (hashtag_id, type, start_date, end_date);
+CREATE UNIQUE INDEX if not exists hashtag_stats_hashtag_id_idx ON public.hashtag_stats USING btree (hashtag_id, type, start_date, end_date);
 
 '''
