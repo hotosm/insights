@@ -18,28 +18,69 @@ import urllib.request as urllib2
 from datetime import datetime
 from datetime import timedelta
 
+
+num_format = "{:,}".format
 class hashtags():
     def __init__(self):
         None
-    def create(self,connection):
+    def createTables(self, connection):
+        print ('creating all_changesets_stats table if not exists')
+        cursor = connection.cursor()
+        cursor.execute(queries.createAllChangesetsStatsTable)
+        connection.commit()
+        cursor.close()
+    def getMaxChangeset(self, connection):
         cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
         sql = f'''
-               create table if not exists all_changesets_stats as select osh.changeset , 
-                sum((osh.tags ? 'building' and (osh."action" =  'create'))::int) added_buildings,
-                sum((osh.tags ? 'building' and (osh."action" =  'modify'))::int) modified_buildings , 
-                sum((osh.tags ? 'aminity' and (osh."action" =  'create'))::int) added_aminity,
-                sum((osh.tags ? 'aminity' and (osh."action" =  'modify'))::int) modified_aminity , 
-                sum((osh.tags ? 'highway' and (osh."action" =  'create'))::int) added_highway,
-                sum((osh.tags ? 'highway' and (osh."action" =  'modify'))::int) modified_highway 
-                from public.osm_element_history osh
-                where "type" in ('way','relation')
-                group by changeset;
+              select max(id) latest_changeset from  public.osm_changeset;
                 '''
-        print('creating all_changesets_stats and populating all existing countries changeset stats')
-        print('Might take around 4 hours to finish ... and will do nothing is the table is already exists')
         cursor.execute(sql)
-        connection.commit()
+
+        record = cursor.fetchone()
+        print("Maximum changeset id in osm_changeset table =",record['latest_changeset'])
+        return record['latest_changeset']
+    
+    def create(self,connection):
+        self.createTables(connection)
+        maxChangeset = self.getMaxChangeset(connection)
+        print(f"The script will scan all changesets starting from {num_format(maxChangeset)} backward")
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+       
+        counter = maxChangeset
+
+        while counter > 0:
+            sql = f'''
+                insert into all_changesets_stats select osh.changeset , 
+                    sum((osh.tags ? 'building' and (osh."action" =  'create'))::int) added_buildings,
+                    sum((osh.tags ? 'building' and (osh."action" =  'modify'))::int) modified_buildings , 
+                    sum((osh.tags ? 'aminity' and (osh."action" =  'create'))::int) added_aminity,
+                    sum((osh.tags ? 'aminity' and (osh."action" =  'modify'))::int) modified_aminity , 
+                    sum((osh.tags ? 'highway' and (osh."action" =  'create'))::int) added_highway,
+                    sum((osh.tags ? 'highway' and (osh."action" =  'modify'))::int) modified_highway,
+                    sum ( 
+                    case 
+                        when (osh.tags ? 'highway' and  (osh."action" =  'create') and "type" = 'way' and osh.nds is not null) then ST_Length(public.construct_geometry(osh.nds,osh.id)::geography)
+                        else 0
+                    end
+                    ) added_highway_meters,
+                    sum ( 
+                    case 
+                        when (osh.tags ? 'highway' and  (osh."action" =  'modify')) then ST_Length(public.construct_geometry(osh.nds,osh.id)::geography)
+                        else 0
+                    end)  modified_highway_meters
+                    from public.osm_element_history osh
+                    where "type" in ('way','relation')
+                    and "action" != 'delete'
+                    and osh.changeset between {counter - 10000} and {counter}
+                    group by changeset on conflict do nothing;
+
+                    '''
+            print(f'{datetime.now()} Calculating changesets stats from changesets IDs {num_format(counter - 10000)} to {num_format(counter)}')
+            cursor.execute(sql)
+            connection.commit()
+            counter = counter - 10001
+
         cursor.close()
 
     def update(self,connection):
@@ -51,26 +92,41 @@ class hashtags():
         cursor.execute(sql)
 
         record = cursor.fetchone()
+        if (record['latest_changeset'] is None):
+            print("There are no changesets in all_changesets_stats table, you need to run changesetStats.py script without -U first")    
+            exit(1)
         print("Maximum changeset id=",record['latest_changeset'])
-
+        
         sql = f'''
               insert into all_changesets_stats 
                 select osh.changeset , 
-                sum((osh.tags ? 'building' and (osh."action" =  'create'))::int) added_buildings,
-                sum((osh.tags ? 'building' and (osh."action" =  'modify'))::int) modified_buildings , 
-                sum((osh.tags ? 'aminity' and (osh."action" =  'create'))::int) added_aminity,
-                sum((osh.tags ? 'aminity' and (osh."action" =  'modify'))::int) modified_aminity , 
-                sum((osh.tags ? 'highway' and (osh."action" =  'create'))::int) added_highway,
-                sum((osh.tags ? 'highway' and (osh."action" =  'modify'))::int) modified_highway 
-                from public.osm_element_history osh
+                    sum((osh.tags ? 'building' and (osh."action" =  'create'))::int) added_buildings,
+                    sum((osh.tags ? 'building' and (osh."action" =  'modify'))::int) modified_buildings , 
+                    sum((osh.tags ? 'aminity' and (osh."action" =  'create'))::int) added_aminity,
+                    sum((osh.tags ? 'aminity' and (osh."action" =  'modify'))::int) modified_aminity , 
+                    sum((osh.tags ? 'highway' and (osh."action" =  'create'))::int) added_highway,
+                    sum((osh.tags ? 'highway' and (osh."action" =  'modify'))::int) modified_highway,
+                    sum ( 
+                    case 
+                        when (osh.tags ? 'highway' and  (osh."action" =  'create') and "type" = 'way' and osh.nds is not null) then ST_Length(public.construct_geometry(osh.nds,osh.id)::geography)
+                        else 0
+                    end
+                    ) added_highway_meters,
+                    sum ( 
+                    case 
+                        when (osh.tags ? 'highway' and  (osh."action" =  'modify')) then ST_Length(public.construct_geometry(osh.nds,osh.id)::geography)
+                        else 0
+                    end)  modified_highway_meters
+                    from public.osm_element_history osh
                 where "type" in ('way','relation')
+                and "action" != 'delete'
                 and osh.changeset > {record['latest_changeset']}
                 group by changeset  ;
 
                 '''
         cursor.execute(sql)
         connection.commit()
-        print("Inserted the new change sets")
+        print(f"Inserted the new change sets with IDs > {num_format(record['latest_changeset'])}")
 
         sql = f'''
               select max(changeset) latest_changeset from public.all_changesets_stats

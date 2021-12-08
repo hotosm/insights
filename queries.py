@@ -119,3 +119,19 @@ CREATE TABLE  if not exists public.hashtag_stats (
 CREATE UNIQUE INDEX if not exists hashtag_stats_hashtag_id_idx ON public.hashtag_stats USING btree (hashtag_id, type, start_date, end_date);
 
 '''
+createAllChangesetsStatsTable = '''
+    
+CREATE TABLE if not exists public.all_changesets_stats (
+	changeset int8 NULL,
+	added_buildings int8 NULL,
+	modified_buildings int8 NULL,
+	added_aminity int8 NULL,
+	modified_aminity int8 NULL,
+	added_highway int8 NULL,
+	modified_highway int8 NULL,
+	added_highway_meters float8 NULL,
+	modified_highway_meters float8 NULL
+);
+CREATE UNIQUE INDEX if not exists all_changesets_stats_changeset_idx ON public.all_changesets_stats USING btree (changeset);
+
+'''
