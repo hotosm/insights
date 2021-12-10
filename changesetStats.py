@@ -60,13 +60,13 @@ class hashtags():
                     sum((osh.tags ? 'highway' and (osh."action" =  'modify'))::int) modified_highway,
                     sum ( 
                     case 
-                        when (osh.tags ? 'highway' and  (osh."action" =  'create') and "type" = 'way' and osh.nds is not null) then ST_Length(public.construct_geometry(osh.nds,osh.id)::geography)
+                        when (osh.tags ? 'highway' and  (osh."action" =  'create')) then ST_Length(public.construct_geometry(osh.nds,osh.id,osh."timestamp")::geography)
                         else 0
                     end
                     ) added_highway_meters,
                     sum ( 
                     case 
-                        when (osh.tags ? 'highway' and  (osh."action" =  'modify')) then ST_Length(public.construct_geometry(osh.nds,osh.id)::geography)
+                        when (osh.tags ? 'highway' and  (osh."action" =  'modify')) then ST_Length(public.construct_geometry(osh.nds,osh.id,osh."timestamp")::geography)
                         else 0
                     end)  modified_highway_meters
                     from public.osm_element_history osh
@@ -108,13 +108,13 @@ class hashtags():
                     sum((osh.tags ? 'highway' and (osh."action" =  'modify'))::int) modified_highway,
                     sum ( 
                     case 
-                        when (osh.tags ? 'highway' and  (osh."action" =  'create') and "type" = 'way' and osh.nds is not null) then ST_Length(public.construct_geometry(osh.nds,osh.id)::geography)
+                        when (osh.tags ? 'highway' and  (osh."action" =  'create')) then ST_Length(public.construct_geometry(osh.nds,osh.id,osh."timestamp")::geography)
                         else 0
                     end
                     ) added_highway_meters,
                     sum ( 
                     case 
-                        when (osh.tags ? 'highway' and  (osh."action" =  'modify')) then ST_Length(public.construct_geometry(osh.nds,osh.id)::geography)
+                        when (osh.tags ? 'highway' and  (osh."action" =  'modify')) then ST_Length(public.construct_geometry(osh.nds,osh.id,osh."timestamp")::geography)
                         else 0
                     end)  modified_highway_meters
                     from public.osm_element_history osh
