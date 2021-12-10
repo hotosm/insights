@@ -498,8 +498,8 @@ class osmh():
                                             elem.attrib.get('version', None), # version for all
                                             action, # action= create, modify, delete, base (for base line items)
                                             args.region,
-                                            float(elem.attrib.get('lat', 0)), # lat for node only
                                             float(elem.attrib.get('lon', 0)), # lon for node only
+                                            float(elem.attrib.get('lat', 0)), # lat for node only
                                             ))
                 tags.clear()
                 nds.clear()

@@ -54,8 +54,8 @@ class hashtags():
                 insert into all_changesets_stats select osh.changeset , 
                     sum((osh.tags ? 'building' and (osh."action" =  'create'))::int) added_buildings,
                     sum((osh.tags ? 'building' and (osh."action" =  'modify'))::int) modified_buildings , 
-                    sum((osh.tags ? 'aminity' and (osh."action" =  'create'))::int) added_aminity,
-                    sum((osh.tags ? 'aminity' and (osh."action" =  'modify'))::int) modified_aminity , 
+                    sum((osh.tags ? 'amenity' and (osh."action" =  'create'))::int) added_amenity,
+                    sum((osh.tags ? 'amenity' and (osh."action" =  'modify'))::int) modified_amenity , 
                     sum((osh.tags ? 'highway' and (osh."action" =  'create'))::int) added_highway,
                     sum((osh.tags ? 'highway' and (osh."action" =  'modify'))::int) modified_highway,
                     sum ( 
@@ -102,8 +102,8 @@ class hashtags():
                 select osh.changeset , 
                     sum((osh.tags ? 'building' and (osh."action" =  'create'))::int) added_buildings,
                     sum((osh.tags ? 'building' and (osh."action" =  'modify'))::int) modified_buildings , 
-                    sum((osh.tags ? 'aminity' and (osh."action" =  'create'))::int) added_aminity,
-                    sum((osh.tags ? 'aminity' and (osh."action" =  'modify'))::int) modified_aminity , 
+                    sum((osh.tags ? 'amenity' and (osh."action" =  'create'))::int) added_amenity,
+                    sum((osh.tags ? 'amenity' and (osh."action" =  'modify'))::int) modified_amenity , 
                     sum((osh.tags ? 'highway' and (osh."action" =  'create'))::int) added_highway,
                     sum((osh.tags ? 'highway' and (osh."action" =  'modify'))::int) modified_highway,
                     sum ( 
