@@ -86,8 +86,8 @@ class hashtags():
                         from all_changesets_stats s join public.osm_changeset c on s.changeset  = c.id 
                         where c.created_at between  '{fridayDate}' and '{nextFridayDate}'
                         and (
-                            (c.tags -> 'comment') ~~ '%{hashtag} %' or (c.tags -> 'hashtags') ~~ '%{hashtag};%' or
-                            (c.tags -> 'comment') ~~ '%{hashtag}' or (c.tags -> 'hashtags') ~~ '%{hashtag}'	
+                            (c.tags -> 'comment') ~~* '%{hashtag} %' or (c.tags -> 'hashtags') ~~* '%{hashtag};%' or
+                            (c.tags -> 'comment') ~~* '%{hashtag}' or (c.tags -> 'hashtags') ~~* '%{hashtag}'	
                             );
                 '''
                 print (f'Calculating new buildings/highway meters for {hashtag} between {fridayDate} and {nextFridayDate}')
@@ -108,8 +108,8 @@ class hashtags():
                     from public.osm_changeset c
                     where c.created_at  between '{fridayDate}' and '{nextFridayDate}'
                     and (
-                            (c.tags -> 'comment') ~~ '%{hashtag} %' or (c.tags -> 'hashtags') ~~ '%{hashtag};%' or
-                            (c.tags -> 'comment') ~~ '%{hashtag}' or (c.tags -> 'hashtags') ~~ '%{hashtag}'
+                            (c.tags -> 'comment') ~~* '%{hashtag} %' or (c.tags -> 'hashtags') ~~* '%{hashtag};%' or
+                            (c.tags -> 'comment') ~~* '%{hashtag}' or (c.tags -> 'hashtags') ~~* '%{hashtag}'
                         )
                     ;
                 '''
@@ -185,8 +185,8 @@ class hashtags():
                         from all_changesets_stats s join public.osm_changeset c on s.changeset  = c.id 
                         where c.created_at between '{beginingDate}' and '{endOftheMonth}'
                         and (
-                            (c.tags -> 'comment') ~~ '%{hashtag} %' or (c.tags -> 'hashtags') ~~ '%{hashtag};%' or
-                            (c.tags -> 'comment') ~~ '%{hashtag}' or (c.tags -> 'hashtags') ~~ '%{hashtag}'	
+                            (c.tags -> 'comment') ~~* '%{hashtag} %' or (c.tags -> 'hashtags') ~~* '%{hashtag};%' or
+                            (c.tags -> 'comment') ~~* '%{hashtag}' or (c.tags -> 'hashtags') ~~* '%{hashtag}'	
                             );
                 '''
                 print (f'Calculating new buildings for {hashtag} between {beginingDate} and {endOftheMonth}')
@@ -205,8 +205,8 @@ class hashtags():
                     from public.osm_changeset c
                     where c.created_at  between '{beginingDate}' and '{endOftheMonth}'
                     and (
-                            (c.tags -> 'comment') ~~ '%{hashtag} %' or (c.tags -> 'hashtags') ~~ '%{hashtag};%' or
-                            (c.tags -> 'comment') ~~ '%{hashtag}' or (c.tags -> 'hashtags') ~~ '%{hashtag}'
+                            (c.tags -> 'comment') ~~* '%{hashtag} %' or (c.tags -> 'hashtags') ~~* '%{hashtag};%' or
+                            (c.tags -> 'comment') ~~* '%{hashtag}' or (c.tags -> 'hashtags') ~~* '%{hashtag}'
                         )
                     ;
                 '''
