@@ -81,7 +81,8 @@ class hashtags():
 
             if(not self.checkIfExists(connection,fridayDate,nextFridayDate,hashtagId)):
                 sql = f'''
-                        select sum (s.added_buildings) total_new_buildings
+                        select sum (s.added_buildings) total_new_buildings,
+		                sum (s.added_highway_meters) total_new_road_meters
                         from all_changesets_stats s join public.osm_changeset c on s.changeset  = c.id 
                         where c.created_at between  '{fridayDate}' and '{nextFridayDate}'
                         and (
@@ -89,14 +90,16 @@ class hashtags():
                             (c.tags -> 'comment') ~~ '%{hashtag}' or (c.tags -> 'hashtags') ~~ '%{hashtag}'	
                             );
                 '''
-                print (f'Calculating new buildings for {hashtag} between {fridayDate} and {nextFridayDate}')
+                print (f'Calculating new buildings/highway meters for {hashtag} between {fridayDate} and {nextFridayDate}')
                 # fridayDate = nextFridayDate
                 # nextFridayDate = fridayDate + timedelta(days=7)
                 # continue
                 cursor.execute(sql)                
                 values = cursor.fetchone()
-                buildingCount = 0 if values[0] is None else values[0]
-                print (f'Calculated {buildingCount} new buildings for {hashtag} between {fridayDate} and {nextFridayDate} is done in {datetime.now() - beginTime}')
+                print('values',values)
+                buildingCount = 0 if values['total_new_buildings'] is None else values['total_new_buildings']
+                highwayMeters = 0 if values['total_new_road_meters'] is None else values['total_new_road_meters']
+                print (f'Calculated {buildingCount} new buildings and {highwayMeters} meter(s) of roads for {hashtag} between {fridayDate} and {nextFridayDate} is done in {datetime.now() - beginTime}')
 
                 # Do contributors
                 beginTime = datetime.now()
@@ -125,7 +128,7 @@ class hashtags():
                 insert = f'''
                 INSERT INTO public.hashtag_stats
                         (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_km, calc_date)
-                        VALUES({hashtagId}, 'w', '{fridayDate}' , '{nextFridayDate}',{buildingCount} , {contrinutorsCount} , -1, now())  on conflict do nothing ;
+                        VALUES({hashtagId}, 'w', '{fridayDate}' , '{nextFridayDate}',{buildingCount} , {contrinutorsCount} , {highwayMeters}, now())  on conflict do nothing ;
                     ''' 
                 cursor.execute(insert)
                 connection.commit()
