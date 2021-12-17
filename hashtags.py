@@ -70,13 +70,14 @@ class hashtags():
             fridayDate = fridayDate - timedelta(days=1)
         
         fridayDate = fridayDate + timedelta(hours=12)      
+        endDate = self.getNewEndDateForOldTMProjectsWeek(endDate)
         print('startDate',startDate,'endDate',endDate) 
         print(fridayDate,'is first Friday at noon')
         nextFridayDate = fridayDate + timedelta(days=7)
         beginTime = datetime.now()
         endTime = None
         
-        while nextFridayDate < endDate:
+        while nextFridayDate <= endDate:
             beginTime = datetime.now()
 
             if(not self.checkIfExists(connection,fridayDate,nextFridayDate,hashtagId)):
@@ -154,6 +155,17 @@ class hashtags():
             return date+ timedelta(days=31)
         else:
             return datetime.now()
+    def getNewEndDateForOldTMProjectsWeek(self,date):
+        # find next friday after end date and in the past
+        nextFriday = date + timedelta(hours=12)   
+        while nextFriday.weekday() != 4:
+            nextFriday = nextFriday + timedelta(days=1)
+
+        if(nextFriday > datetime.now()):
+           return date
+        else:
+            return nextFriday
+
     def buildMonthlyStats(self,connection,hashtag ,hashtagId, startDate,endDate,isTMProject):
         cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
         # We need to find first day of the month
