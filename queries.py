@@ -95,12 +95,14 @@ CREATE UNIQUE INDEX if not exists boundaries_nameen_idx ON public.boundaries USI
 
 createHashtagsTables = '''
     
-CREATE TABLE  if not exists public.hashtag (
+CREATE TABLE  if not exists  public.hashtag (
 	id int4 NOT NULL GENERATED ALWAYS AS IDENTITY,
 	"name" varchar NOT NULL,
 	added_by int4 NULL,
 	created_at timestamp NOT NULL DEFAULT now(),
 	is_tm_project bool NULL,
+	first_used date NULL,
+	last_used date NULL,
 	CONSTRAINT hashtag_pk PRIMARY KEY (id)
 );
 CREATE UNIQUE INDEX if not exists  hashtag_name_idx ON public.hashtag USING btree (name);

@@ -57,12 +57,103 @@ class hashtags():
             return True
         else:
             return False
+    def getFirstLastUsed(self,connection, hashtag,firstUsed,lastUsed):
+        beginTime = datetime.now()
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+            
+        if (firstUsed is None):
+            sql = f'''
+                    select  max(c.created_at) last_used,min(c.created_at) first_used
+                from public.osm_changeset c
+                where (
+                        (c.tags -> 'comment') ~~* '%#{hashtag} %' or (c.tags -> 'hashtags') ~~* '%#{hashtag};%' or
+                        (c.tags -> 'comment') ~~* '%#{hashtag}' or (c.tags -> 'hashtags') ~~* '%#{hashtag}'
+            );
+                    '''
+            print(f'''Getting first used & last used dates for #{hashtag}''')    
+            cursor.execute(sql)
+            record = cursor.fetchone()
+            print(f'''#{hashtag} first used {record['first_used']} last_used {record['last_used']} found in query time: {datetime.now() - beginTime}''')
+            sql = f'''
+                    UPDATE public.hashtag
+                            SET first_used='{record['first_used']}', last_used='{record['last_used']}'
+                            WHERE "name"='{hashtag}';
 
-    def buildWeeklyStats(self,connection,hashtag ,hashtagId, startDate,endDate,inputDate):
+                    '''
+            cursor.execute(sql)
+            connection.commit()
+            cursor.close()
+            return [record['first_used'],record['last_used']]
+        else: # fist used and last used already calculated, get the last used only
+            sql = f'''
+                    select  max(c.created_at) last_used
+                from public.osm_changeset c
+                where c.created_at >= '{lastUsed}'
+                    and (
+                        (c.tags -> 'comment') ~~* '%#{hashtag} %' or (c.tags -> 'hashtags') ~~* '%#{hashtag};%' or
+                        (c.tags -> 'comment') ~~* '%#{hashtag}' or (c.tags -> 'hashtags') ~~* '%#{hashtag}'
+                     );
+                    '''
+            print(f'''Getting last used dates for #{hashtag}''')    
+            cursor.execute(sql)
+            record = cursor.fetchone()
+            print(f'''#{hashtag} first used {firstUsed} last_used {record['last_used']} found in query time: {datetime.now() - beginTime}''')
+            sql = f'''
+                    UPDATE public.hashtag
+                            SET last_used='{record['last_used']}'
+                            WHERE "name"='{hashtag}';
+
+                    '''
+            cursor.execute(sql)
+            connection.commit()
+            cursor.close()
+            return [firstUsed,record['last_used']]
+        
+    def getTotalUniqueContributors(self,cursor,start,end,hashtag):
+        beginTime = datetime.now()
+        sql = f'''
+                    select count(distinct c.user_id) total
+                    from public.osm_changeset c
+                    where c.created_at  between '{start}' and '{end}'
+                    and (
+                            (c.tags -> 'comment') ~~* '%#{hashtag} %' or (c.tags -> 'hashtags') ~~* '%#{hashtag};%' or
+                            (c.tags -> 'comment') ~~* '%#{hashtag}' or (c.tags -> 'hashtags') ~~* '%#{hashtag}'
+                        )
+                    ;
+                '''
+        print (f'Calculating contrinutors for {hashtag} between {start} and {end}')
+        cursor.execute(sql)                
+        values = cursor.fetchone()
+        contrinutorsCount = 0 if values[0] is None else values[0]
+        print (f'Calculated {contrinutorsCount} contrinutors for {hashtag} between {start} and {end} is done in {datetime.now() - beginTime}')
+                
+        return contrinutorsCount
+    def getTotalBuildingsHighways(self,cursor,start,end,hashtag):
+        beginTime = datetime.now()
+        sql = f'''
+                        select sum (s.added_buildings) total_new_buildings,
+		                sum (s.added_highway_meters) total_new_road_meters
+                        from all_changesets_stats s join public.osm_changeset c on s.changeset  = c.id 
+                        where c.created_at between '{start}' and '{end}'
+                        and (
+                            (c.tags -> 'comment') ~~* '%#{hashtag} %' or (c.tags -> 'hashtags') ~~* '%#{hashtag};%' or
+                            (c.tags -> 'comment') ~~* '%#{hashtag}' or (c.tags -> 'hashtags') ~~* '%#{hashtag}'	
+                            );
+                '''
+        print (f'Calculating new buildings/highway meters for {hashtag} between {start} and {end}')
+        
+        cursor.execute(sql)                
+        values = cursor.fetchone()
+        buildingCount = 0 if values[0] is None else values[0]
+        highwayMeters = 0 if values['total_new_road_meters'] is None else values['total_new_road_meters']
+        
+        print (f'Calculated {buildingCount} new buildings and {highwayMeters} meter(s) of roads for {hashtag} between {start} and {end} is done in {datetime.now() - beginTime}')
+
+        return [buildingCount,highwayMeters]    
+
+    def buildWeeklyStats(self,connection,hashtag ,hashtagId, startDate,endDate):
         cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
         # We need to find first Friday after the start date
-
-        
         fridayDate = startDate = datetime.combine(startDate, datetime.min.time()) 
         endDate = startDate if endDate is None else datetime.combine(endDate, datetime.min.time())
 
@@ -70,62 +161,16 @@ class hashtags():
             fridayDate = fridayDate - timedelta(days=1)
         
         fridayDate = fridayDate + timedelta(hours=12)      
-        endDate = self.getNewEndDateForOldTMProjectsWeek(endDate)
+        endDate = self.getNewEndDateWeek(endDate)
         print('startDate',startDate,'endDate',endDate) 
         print(fridayDate,'is first Friday at noon')
         nextFridayDate = fridayDate + timedelta(days=7)
-        beginTime = datetime.now()
-        endTime = None
         
         while nextFridayDate <= endDate:
-            beginTime = datetime.now()
-
             if(not self.checkIfExists(connection,fridayDate,nextFridayDate,hashtagId)):
-                sql = f'''
-                        select sum (s.added_buildings) total_new_buildings,
-		                sum (s.added_highway_meters) total_new_road_meters
-                        from all_changesets_stats s join public.osm_changeset c on s.changeset  = c.id 
-                        where c.created_at between  '{fridayDate}' and '{nextFridayDate}'
-                        and (
-                            (c.tags -> 'comment') ~~* '%{hashtag} %' or (c.tags -> 'hashtags') ~~* '%{hashtag};%' or
-                            (c.tags -> 'comment') ~~* '%{hashtag}' or (c.tags -> 'hashtags') ~~* '%{hashtag}'	
-                            );
-                '''
-                print (f'Calculating new buildings/highway meters for {hashtag} between {fridayDate} and {nextFridayDate}')
-                # fridayDate = nextFridayDate
-                # nextFridayDate = fridayDate + timedelta(days=7)
-                # continue
-                cursor.execute(sql)                
-                values = cursor.fetchone()
-                print('values',values)
-                buildingCount = 0 if values['total_new_buildings'] is None else values['total_new_buildings']
-                highwayMeters = 0 if values['total_new_road_meters'] is None else values['total_new_road_meters']
-                print (f'Calculated {buildingCount} new buildings and {highwayMeters} meter(s) of roads for {hashtag} between {fridayDate} and {nextFridayDate} is done in {datetime.now() - beginTime}')
-
+                [buildingCount,highwayMeters] = self.getTotalBuildingsHighways(cursor,fridayDate,nextFridayDate,hashtag)
                 # Do contributors
-                beginTime = datetime.now()
-                sql = f'''
-                    select count(distinct c.user_id) total
-                    from public.osm_changeset c
-                    where c.created_at  between '{fridayDate}' and '{nextFridayDate}'
-                    and (
-                            (c.tags -> 'comment') ~~* '%{hashtag} %' or (c.tags -> 'hashtags') ~~* '%{hashtag};%' or
-                            (c.tags -> 'comment') ~~* '%{hashtag}' or (c.tags -> 'hashtags') ~~* '%{hashtag}'
-                        )
-                    ;
-                '''
-                print (f'Calculating contrinutors for {hashtag} between {fridayDate} and {nextFridayDate}')
-                # fridayDate = nextFridayDate
-                # nextFridayDate = fridayDate + timedelta(days=7)
-                # continue
-                cursor.execute(sql)                
-                values = cursor.fetchone()
-                contrinutorsCount = 0 if values[0] is None else values[0]
-                print (f'Calculated {contrinutorsCount} contrinutors for {hashtag} between {fridayDate} and {nextFridayDate} is done in {datetime.now() - beginTime}')
-                
-
-                # TODO: Calculate KM of roads
-
+                contrinutorsCount = self.getTotalUniqueContributors(cursor,fridayDate,nextFridayDate,hashtag)
                 insert = f'''
                 INSERT INTO public.hashtag_stats
                         (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_km, calc_date)
@@ -145,7 +190,7 @@ class hashtags():
         month = (date.month % 12) + 1
         year = date.year + (date.month + 1 > 12)
         return datetime(year, month, 1)
-    def getNewEndDateForOldTMProjects(self,date):
+    def getNewEndDateMonth(self,date):
         # this month date first date
         beginingOfThisMonth = datetime.now()
 
@@ -155,7 +200,7 @@ class hashtags():
             return date+ timedelta(days=31)
         else:
             return datetime.now()
-    def getNewEndDateForOldTMProjectsWeek(self,date):
+    def getNewEndDateWeek(self,date):
         # find next friday after end date and in the past
         nextFriday = date + timedelta(hours=12)   
         while nextFriday.weekday() != 4:
@@ -165,8 +210,16 @@ class hashtags():
            return date
         else:
             return nextFriday
-
-    def buildMonthlyStats(self,connection,hashtag ,hashtagId, startDate,endDate,isTMProject):
+    def getNewEndDateQuarter(self,date):
+        nextQuarter = date 
+        while nextQuarter.month != 10 and  nextQuarter.month != 7 and  nextQuarter.month != 4 and nextQuarter.month != 1 :
+            nextQuarter = nextQuarter + timedelta(days=1)
+        nextQuarter = datetime(nextQuarter.year,nextQuarter.month,1)
+        if(nextQuarter > datetime.now()):
+           return date
+        else:
+            return nextQuarter
+    def buildMonthlyStats(self,connection,hashtag ,hashtagId, startDate,endDate):
         cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
         # We need to find first day of the month
 
@@ -175,8 +228,8 @@ class hashtags():
         endDate = startDate if endDate is None else datetime.combine(endDate, datetime.min.time())
 
         print('startDate',startDate,'endDate',endDate) 
-        if (isTMProject):
-            endDate = self.getNewEndDateForOldTMProjects(endDate)
+       
+        endDate = self.getNewEndDateMonth(endDate)
 
         while beginingDate.day != 1:
             beginingDate = beginingDate - timedelta(days=1)
@@ -185,59 +238,11 @@ class hashtags():
         print(beginingDate,'is first day of the month')
         endOftheMonth = self.get_next_month(beginingDate)
         
-        beginTime = datetime.now()
-        endTime = None
-        
         while endOftheMonth <= endDate:
-            beginTime = datetime.now()
-
             if(not self.checkIfExists(connection,beginingDate,endOftheMonth,hashtagId)):
-                sql = f'''
-                        select sum (s.added_buildings) total_new_buildings,
-		                sum (s.added_highway_meters) total_new_road_meters
-                        from all_changesets_stats s join public.osm_changeset c on s.changeset  = c.id 
-                        where c.created_at between '{beginingDate}' and '{endOftheMonth}'
-                        and (
-                            (c.tags -> 'comment') ~~* '%{hashtag} %' or (c.tags -> 'hashtags') ~~* '%{hashtag};%' or
-                            (c.tags -> 'comment') ~~* '%{hashtag}' or (c.tags -> 'hashtags') ~~* '%{hashtag}'	
-                            );
-                '''
-                print (f'Calculating new buildings/highway meters for {hashtag} between {beginingDate} and {endOftheMonth}')
-                
-                # beginingDate = endOftheMonth
-                # endOftheMonth = self.get_next_month(beginingDate)
-                # continue
-                cursor.execute(sql)                
-                values = cursor.fetchone()
-                buildingCount = 0 if values[0] is None else values[0]
-                highwayMeters = 0 if values['total_new_road_meters'] is None else values['total_new_road_meters']
-               
-                print (f'Calculated {buildingCount} new buildings and {highwayMeters} meter(s) of roads for {hashtag} between {beginingDate} and {endOftheMonth} is done in {datetime.now() - beginTime}')
-
+                [buildingCount,highwayMeters] = self.getTotalBuildingsHighways(cursor,beginingDate,endOftheMonth,hashtag)
                 # Do contributors
-                beginTime = datetime.now()
-                sql = f'''
-                    select count(distinct c.user_id) total
-                    from public.osm_changeset c
-                    where c.created_at  between '{beginingDate}' and '{endOftheMonth}'
-                    and (
-                            (c.tags -> 'comment') ~~* '%{hashtag} %' or (c.tags -> 'hashtags') ~~* '%{hashtag};%' or
-                            (c.tags -> 'comment') ~~* '%{hashtag}' or (c.tags -> 'hashtags') ~~* '%{hashtag}'
-                        )
-                    ;
-                '''
-                print (f'Calculating contrinutors for {hashtag} between {beginingDate} and {endOftheMonth}')
-                # beginingDate = endOftheMonth
-                # endOftheMonth = self.get_next_month(beginingDate)
-                # continue
-                cursor.execute(sql)                
-                values = cursor.fetchone()
-                contrinutorsCount = 0 if values[0] is None else values[0]
-                print (f'Calculated {contrinutorsCount} contrinutors for {hashtag} between {beginingDate} and {endOftheMonth} is done in {datetime.now() - beginTime}')
-                
-
-                # TODO: Calculate KM of roads
-
+                contrinutorsCount = self.getTotalUniqueContributors(cursor,beginingDate,endOftheMonth,hashtag)
                 insert = f'''
                 INSERT INTO public.hashtag_stats
                         (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_km, calc_date)
@@ -253,12 +258,91 @@ class hashtags():
 
         print('Done monthly stats for', hashtag)
         cursor.close()
-    def calcHashtagStats(self,connection, startDate, frequency):
+    def getNextQuarter(self,date):
+        nextQ = date + timedelta(days=93)
+        nextQ = datetime(nextQ.year,nextQ.month,1)
+        return nextQ
+        
+    def buildQuarterlyStats(self,connection,hashtag ,hashtagId, startDate,endDate):
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        # We need to find first day of the quarter
+
+        
+        beginingDate = startDate = datetime.combine(startDate, datetime.min.time()) 
+        endDate = startDate if endDate is None else datetime.combine(endDate, datetime.min.time())
+
+        print('startDate',startDate,'endDate',endDate) 
+       
+       
+        while beginingDate.month != 10 and  beginingDate.month != 7 and  beginingDate.month != 4 and beginingDate.month != 1 :
+            beginingDate = beginingDate - timedelta(days=1)
+
+        beginingDate = datetime(beginingDate.year,beginingDate.month,1)
+        print('beginingDate',beginingDate)
+
+        
+        endDate = self.getNewEndDateQuarter(endDate)
+        print('quarter startDate',beginingDate,'quarter endDate',endDate) 
+        
+        endOfTheQuarter = self.getNextQuarter(beginingDate)
+        while endOfTheQuarter <= endDate:
+            if(not self.checkIfExists(connection,beginingDate,endOfTheQuarter,hashtagId)):
+                [buildingCount,highwayMeters] = self.getTotalBuildingsHighways(cursor,beginingDate,endOfTheQuarter,hashtag)
+                # Do contributors
+                contrinutorsCount = self.getTotalUniqueContributors(cursor,beginingDate,endOfTheQuarter,hashtag)
+                insert = f'''
+                INSERT INTO public.hashtag_stats
+                        (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_km, calc_date)
+                        VALUES({hashtagId}, 'q', '{beginingDate}' , '{endOfTheQuarter}',{buildingCount} , {contrinutorsCount} , {highwayMeters}, now())  on conflict do nothing ;
+                    ''' 
+                cursor.execute(insert)
+                connection.commit()
+            else:
+                print(f'Stats for {hashtag} between {beginingDate} and {endOfTheQuarter} is already calculated')
+            beginingDate = endOfTheQuarter
+            endOfTheQuarter = self.getNextQuarter(beginingDate)           
+        print('Done quarterly stats for', hashtag)
+        cursor.close()
+    def buildYearlyStats(self,connection,hashtag ,hashtagId, startDate,endDate):
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        # We need to find first day of the year
+
+        
+        beginingDate = startDate = datetime.combine(startDate, datetime.min.time()) 
+        endDate = startDate if endDate is None else datetime.combine(endDate, datetime.min.time())
+
+        print('startDate',startDate,'endDate',endDate) 
+        beginingDate = datetime(beginingDate.year,1,1)
+        
+        endDate = datetime(endDate.year,1,1) 
+        print('year startDate',beginingDate,'year endDate',endDate) 
+        
+        endOfTheYear =  datetime(beginingDate.year + 1 ,1,1)
+        while endOfTheYear <= endDate:
+            if(not self.checkIfExists(connection,beginingDate,endOfTheYear,hashtagId)):
+                [buildingCount,highwayMeters] = self.getTotalBuildingsHighways(cursor,beginingDate,endOfTheYear,hashtag)
+                # Do contributors
+                contrinutorsCount = self.getTotalUniqueContributors(cursor,beginingDate,endOfTheYear,hashtag)
+                insert = f'''
+                INSERT INTO public.hashtag_stats
+                        (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_km, calc_date)
+                        VALUES({hashtagId}, 'y', '{beginingDate}' , '{endOfTheYear}',{buildingCount} , {contrinutorsCount} , {highwayMeters}, now())  on conflict do nothing ;
+                    ''' 
+                cursor.execute(insert)
+                connection.commit()
+            else:
+                print(f'Stats for {hashtag} between {beginingDate} and {endOfTheYear} is already calculated')
+            beginingDate = endOfTheYear
+            endOfTheYear = datetime(beginingDate.year + 1 ,1, 1)        
+        print('Done yearly stats for', hashtag)
+        cursor.close()
+
+    def calcHashtagStats(self,connection):
         self.createTables(connection)
         cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
         sql = '''
-        SELECT id, "name", added_by, created_at, is_tm_project
+        SELECT id, "name", added_by, created_at, first_used, last_used
         FROM public.hashtag;
 
         '''
@@ -266,29 +350,24 @@ class hashtags():
        
         records = cursor.fetchall() 
         print("records", records )
-        s = datetime.strptime(startDate, "%Y-%m-%d")
+       
         for row in records:
             # select * 
             # from public.tm_project_details(10405)
-            if (row['is_tm_project']):
-                None
-                # get start and end dates for TM project 
-                cursor.execute(f'''select * 
-                                 from public.tm_project_details({row['name']})''')
-       
-                project = cursor.fetchone()
-                print ('hotosm-project-' + row['name'], 'project goes from' , project['created'],'to',project['last_activity'])
-                self.buildWeeklyStats(connection, 'hotosm-project-' + row['name'],row['id'],project['created'],project['last_activity'],row['is_tm_project'])
-                self.buildMonthlyStats(connection, 'hotosm-project-' + row['name'],row['id'],project['created'],project['last_activity'],row['is_tm_project'])
+            [firstUsed,lastUsed] = self.getFirstLastUsed(connection,row['name'].strip(),row['first_used'],row['last_used'])
+            if firstUsed is not None and lastUsed is not None:
+                self.buildWeeklyStats(connection, row['name'].strip(),row['id'],firstUsed,lastUsed)
+                self.buildMonthlyStats(connection, row['name'].strip(),row['id'],firstUsed,lastUsed)
+                self.buildQuarterlyStats(connection, row['name'].strip(),row['id'],firstUsed,lastUsed)
+                self.buildYearlyStats(connection, row['name'].strip(),row['id'],firstUsed,lastUsed)
             else:
-                None
-                self.buildWeeklyStats(connection,row['name'],row['id'],s,datetime.now(),row['is_tm_project'])
-                self.buildMonthlyStats(connection,row['name'],row['id'],s,datetime.now(),row['is_tm_project'])
+                print(f'''hashtag {row['name']} has never been used in an OSM changetst hashtags field or comment''')
+         
            
         cursor.close()
 
 
-beginTime = datetime.now()
+initialTime = datetime.now()
 endTime = None
 timeCost = None
 
@@ -337,13 +416,10 @@ except psycopg2.OperationalError as err:
 
 md = hashtags()
 
-print('args.frequency ', args.frequency)
-print('args.start ', args.start)
-
-md.calcHashtagStats(conn,args.start,args.frequency)
+md.calcHashtagStats(conn)
 
 endTime = datetime.now()
-timeCost = endTime - beginTime
+timeCost = endTime - initialTime
 
 print( 'Processing time cost is ', timeCost)
 
