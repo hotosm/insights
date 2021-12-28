@@ -344,7 +344,8 @@ class hashtags():
         
         sql = '''
         SELECT id, "name", added_by, created_at, first_used, last_used
-        FROM public.hashtag;
+        FROM public.hashtag
+        order by first_used desc;
 
         '''
         cursor.execute(sql)
