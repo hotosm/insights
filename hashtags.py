@@ -73,16 +73,17 @@ class hashtags():
             print(f'''Getting first used & last used dates for #{hashtag}''')    
             cursor.execute(sql)
             record = cursor.fetchone()
-            print(f'''#{hashtag} first used {record['first_used']} last_used {record['last_used']} found in query time: {datetime.now() - beginTime}''')
-            sql = f'''
-                    UPDATE public.hashtag
-                            SET first_used='{record['first_used']}', last_used='{record['last_used']}'
-                            WHERE "name"='{hashtag}';
+            print(f'''#{hashtag} first used {record['first_used']} last used {record['last_used']} found in query time: {datetime.now() - beginTime}''')
+            if (record['first_used'] is not None):
+                sql = f'''
+                        UPDATE public.hashtag
+                                SET first_used='{record['first_used']}', last_used='{record['last_used']}'
+                                WHERE "name"='{hashtag}';
 
-                    '''
-            cursor.execute(sql)
-            connection.commit()
-            cursor.close()
+                        '''
+                cursor.execute(sql)
+                connection.commit()
+                cursor.close()
             return [record['first_used'],record['last_used']]
         else: # fist used and last used already calculated, get the last used only
             sql = f'''
@@ -121,13 +122,13 @@ class hashtags():
                         )
                     ;
                 '''
-        print (f'Calculating contrinutors for {hashtag} between {start} and {end}')
+        print (f'Calculating contributors for {hashtag} between {start} and {end}')
         cursor.execute(sql)                
         values = cursor.fetchone()
-        contrinutorsCount = 0 if values[0] is None else values[0]
-        print (f'Calculated {contrinutorsCount} contrinutors for {hashtag} between {start} and {end} is done in {datetime.now() - beginTime}')
+        contributorsCount = 0 if values[0] is None else values[0]
+        print (f'Calculated {contributorsCount} contributors for {hashtag} between {start} and {end} is done in {datetime.now() - beginTime}')
                 
-        return contrinutorsCount
+        return contributorsCount
     def getTotalBuildingsHighways(self,cursor,start,end,hashtag):
         beginTime = datetime.now()
         sql = f'''
@@ -170,11 +171,11 @@ class hashtags():
             if(not self.checkIfExists(connection,fridayDate,nextFridayDate,hashtagId)):
                 [buildingCount,highwayMeters] = self.getTotalBuildingsHighways(cursor,fridayDate,nextFridayDate,hashtag)
                 # Do contributors
-                contrinutorsCount = self.getTotalUniqueContributors(cursor,fridayDate,nextFridayDate,hashtag)
+                contributorsCount = self.getTotalUniqueContributors(cursor,fridayDate,nextFridayDate,hashtag)
                 insert = f'''
                 INSERT INTO public.hashtag_stats
                         (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_km, calc_date)
-                        VALUES({hashtagId}, 'w', '{fridayDate}' , '{nextFridayDate}',{buildingCount} , {contrinutorsCount} , {highwayMeters}, now())  on conflict do nothing ;
+                        VALUES({hashtagId}, 'w', '{fridayDate}' , '{nextFridayDate}',{buildingCount} , {contributorsCount} , {highwayMeters}, now())  on conflict do nothing ;
                     ''' 
                 cursor.execute(insert)
                 connection.commit()
@@ -242,11 +243,11 @@ class hashtags():
             if(not self.checkIfExists(connection,beginingDate,endOftheMonth,hashtagId)):
                 [buildingCount,highwayMeters] = self.getTotalBuildingsHighways(cursor,beginingDate,endOftheMonth,hashtag)
                 # Do contributors
-                contrinutorsCount = self.getTotalUniqueContributors(cursor,beginingDate,endOftheMonth,hashtag)
+                contributorsCount = self.getTotalUniqueContributors(cursor,beginingDate,endOftheMonth,hashtag)
                 insert = f'''
                 INSERT INTO public.hashtag_stats
                         (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_km, calc_date)
-                        VALUES({hashtagId}, 'm', '{beginingDate}' , '{endOftheMonth}',{buildingCount} , {contrinutorsCount} , {highwayMeters}, now())  on conflict do nothing ;
+                        VALUES({hashtagId}, 'm', '{beginingDate}' , '{endOftheMonth}',{buildingCount} , {contributorsCount} , {highwayMeters}, now())  on conflict do nothing ;
                     ''' 
                 cursor.execute(insert)
                 connection.commit()
@@ -289,11 +290,11 @@ class hashtags():
             if(not self.checkIfExists(connection,beginingDate,endOfTheQuarter,hashtagId)):
                 [buildingCount,highwayMeters] = self.getTotalBuildingsHighways(cursor,beginingDate,endOfTheQuarter,hashtag)
                 # Do contributors
-                contrinutorsCount = self.getTotalUniqueContributors(cursor,beginingDate,endOfTheQuarter,hashtag)
+                contributorsCount = self.getTotalUniqueContributors(cursor,beginingDate,endOfTheQuarter,hashtag)
                 insert = f'''
                 INSERT INTO public.hashtag_stats
                         (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_km, calc_date)
-                        VALUES({hashtagId}, 'q', '{beginingDate}' , '{endOfTheQuarter}',{buildingCount} , {contrinutorsCount} , {highwayMeters}, now())  on conflict do nothing ;
+                        VALUES({hashtagId}, 'q', '{beginingDate}' , '{endOfTheQuarter}',{buildingCount} , {contributorsCount} , {highwayMeters}, now())  on conflict do nothing ;
                     ''' 
                 cursor.execute(insert)
                 connection.commit()
@@ -322,11 +323,11 @@ class hashtags():
             if(not self.checkIfExists(connection,beginingDate,endOfTheYear,hashtagId)):
                 [buildingCount,highwayMeters] = self.getTotalBuildingsHighways(cursor,beginingDate,endOfTheYear,hashtag)
                 # Do contributors
-                contrinutorsCount = self.getTotalUniqueContributors(cursor,beginingDate,endOfTheYear,hashtag)
+                contributorsCount = self.getTotalUniqueContributors(cursor,beginingDate,endOfTheYear,hashtag)
                 insert = f'''
                 INSERT INTO public.hashtag_stats
                         (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_km, calc_date)
-                        VALUES({hashtagId}, 'y', '{beginingDate}' , '{endOfTheYear}',{buildingCount} , {contrinutorsCount} , {highwayMeters}, now())  on conflict do nothing ;
+                        VALUES({hashtagId}, 'y', '{beginingDate}' , '{endOfTheYear}',{buildingCount} , {contributorsCount} , {highwayMeters}, now())  on conflict do nothing ;
                     ''' 
                 cursor.execute(insert)
                 connection.commit()
@@ -413,14 +414,15 @@ except psycopg2.OperationalError as err:
     sys.exit(1)
 
 
+try:
+    md = hashtags()
 
-md = hashtags()
+    md.calcHashtagStats(conn)
 
-md.calcHashtagStats(conn)
-
-endTime = datetime.now()
-timeCost = endTime - initialTime
-
-print( 'Processing time cost is ', timeCost)
-
-print ('All done. Hashtag calculation is done')
+    endTime = datetime.now()
+    timeCost = endTime - initialTime
+    print( 'Processing time cost is ', timeCost)
+    print ('All done. Hashtag calculation is done')
+except Exception as e:
+    print (e.__doc__)
+    print (e.message)
