@@ -85,7 +85,7 @@ class hashtags():
                 connection.commit()
                 cursor.close()
             return [record['first_used'],record['last_used']]
-        else: # fist used and last used already calculated, get the last used only
+        else: # first used and last used already calculated, get the last used only
             sql = f'''
                     select  max(c.created_at) last_used
                 from public.osm_changeset c
@@ -193,14 +193,10 @@ class hashtags():
         return datetime(year, month, 1)
     def getNewEndDateMonth(self,date):
         # this month date first date
-        beginingOfThisMonth = datetime.now()
+        while date.day != 1:
+            date = date + timedelta(days=1)
+        return date
 
-        while beginingOfThisMonth.day != 1:
-            beginingOfThisMonth = beginingOfThisMonth - timedelta(days=1)
-        if (beginingOfThisMonth > date):
-            return date+ timedelta(days=31)
-        else:
-            return datetime.now()
     def getNewEndDateWeek(self,date):
         # find next friday after end date and in the past
         nextFriday = date + timedelta(hours=12)   
