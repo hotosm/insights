@@ -191,12 +191,19 @@ class hashtags():
         month = (date.month % 12) + 1
         year = date.year + (date.month + 1 > 12)
         return datetime(year, month, 1)
-    def getNewEndDateMonth(self,date):
+    def getNewEndDateMonth(self,p_date):
         # this month date first date
-        while date.day != 1:
-            date = date + timedelta(days=1)
-        return date
+        monthEndDate = p_date
+        while monthEndDate.day != 1:
+            monthEndDate = monthEndDate + timedelta(days=1)
+        
+        monthStartDate = datetime(p_date.year,p_date.month,1)
 
+        if (monthEndDate < datetime.now()):
+            return monthEndDate
+        else:
+            return monthStartDate
+            
     def getNewEndDateWeek(self,date):
         # find next friday after end date and in the past
         nextFriday = date + timedelta(hours=12)   
