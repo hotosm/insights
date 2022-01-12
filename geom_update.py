@@ -11,12 +11,8 @@ import time
 import logging
 from psycopg2 import *
 from psycopg2.extras import *
-from configparser import ConfigParser
-
-config = ConfigParser()
-config.read("../config.txt")
-
-
+import connection
+import sys
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.DEBUG)
 
 class Database :
@@ -91,7 +87,7 @@ class Insight:
     """This class connects to Insight database and responsible for Values derived from database"""
 
     def __init__(self, parameters=None):
-        self.database = Database(dict(config.items("local")))
+        self.database = Database(connection.get_connection_param())
         self.con, self.cur = self.database.connect()
         self.params = parameters
 
@@ -132,6 +128,7 @@ class Insight:
         
     
     def batch_update(self,start_batch,end_batch,batch_frequency):
+        """Upadtes Geometry with batch , given start element id , end element id to look for along with batch frequency , Here Batch frequency means frequency that you want to run a batch with, This function is made with the purpose for future usage as well if we want to update specific osm id from and to only beside scanning whole table"""
         batch_start_time = time.time()
         logging.debug(f"""----------Update Geometry Function has been started for {start_batch} to {end_batch} with batch frequency {batch_frequency}----------""")
         updated_row=start_batch
@@ -147,11 +144,16 @@ class Insight:
         #closing connection   
         self.database.close_conn()  
         logging.debug("-----Updating Geometry Took-- %s seconds -----" % (time.time() - batch_start_time))
+
+
             
 try:
+
     connect=Insight()
     max_element_id,min_element_id= connect.getMax_osm_element_history_id()
+    """Passing Whole Osm element with per 100 Batch for now"""
     connect.batch_update(min_element_id,max_element_id,100)
 except Exception as e:
-    logging.debug (e.__doc__)
-    logging.debug (e.message)
+    logging.debug (e)
+    sys.exit(1) 
+

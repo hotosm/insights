@@ -11,3 +11,4 @@ changesets-120912.osm
 run.bat
 OSMB-92b499783a132b16489ed81a7b278321f8777fa0.geojson.gz
 *.osm.bz2
+env
