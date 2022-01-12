@@ -145,15 +145,14 @@ class Insight:
         self.database.close_conn()  
         logging.debug("-----Updating Geometry Took-- %s seconds -----" % (time.time() - batch_start_time))
 
-
-            
-try:
-
-    connect=Insight()
-    max_element_id,min_element_id= connect.getMax_osm_element_history_id()
-    """Passing Whole Osm element with per 500000 Batch for now"""
-    connect.batch_update(min_element_id,max_element_id,500000)
-except Exception as e:
-    logging.debug (e)
-    sys.exit(1) 
+# The parser is only called if this script is called as a script/executable (via command line) but not when imported by another script
+if __name__=='__main__': 
+    try:
+        connect=Insight()
+        max_element_id,min_element_id= connect.getMax_osm_element_history_id()
+        """Passing Whole Osm element with per 500000 Batch for now"""
+        connect.batch_update(min_element_id,max_element_id,100)
+    except Exception as e:
+        logging.debug (e)
+        sys.exit(1) 
 

@@ -1,11 +1,11 @@
 import os
 
 # Type defaults here
-_DATABASE_HOST = None
+_DATABASE_HOST = 'localhost'
 _DATABASE_PORT = '5432'
 _DATABASE_NAME = 'postgres'
-_DATABASE_USER = 'postgres_dba'
-_DATABASE_PASSWORD = None
+_DATABASE_USER = 'admin'
+_DATABASE_PASSWORD = 'admin'
 
 # Pick from ENVVAR if available, else fallback to values above
 DATABASE_HOST = os.getenv('DATABASE_HOST', _DATABASE_HOST)
