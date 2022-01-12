@@ -151,8 +151,8 @@ try:
 
     connect=Insight()
     max_element_id,min_element_id= connect.getMax_osm_element_history_id()
-    """Passing Whole Osm element with per 100 Batch for now"""
-    connect.batch_update(min_element_id,max_element_id,100)
+    """Passing Whole Osm element with per 500000 Batch for now"""
+    connect.batch_update(min_element_id,max_element_id,500000)
 except Exception as e:
     logging.debug (e)
     sys.exit(1) 
