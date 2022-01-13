@@ -152,16 +152,13 @@ where oeh.action != 'delete'
         logging.debug(f"""Changed Row : {result}""")
 
     def batch_update(self, start_batch_date, end_batch_date, batch_frequency):
-        """Upadtes Geometry with batch , given start timestamp , end timestamp to look for along with batch frequency , Here Batch frequency means frequency that you want to run a batch with, Currently Supported : DAILY,WEEKLY,MONTHLY,QUARTERLY,YEARLY. This function is made with the purpose for future usage as well if we want to update specific element between timestamp"""
+        """Updates Geometry with  given start timestamp (python datetime format) , end timestamp along with batch frequency , Here Batch frequency means frequency that you want to run a batch with, Currently Supported : DAILY,WEEKLY,MONTHLY,QUARTERLY,YEARLY Only Supports with default Python Enum Type input (eg: BatchFrequency.DAILY). This function is made with the purpose for future usage as well if we want to update specific element between timestamp"""
         # BatchFrequency.DAILY
         batch_start_time = time.time()
         # Type checking
         if not isinstance(batch_frequency, BatchFrequency):
             raise TypeError('Batch Frequency Invalid')
         # Considering date is in yyyy-mm-dd H:M:S format
-        # start_batch_date = datetime.datetime.strptime(start, "%Y-%m-%d %H:%M:%S")
-        # end_batch_date = datetime.datetime.strptime(end, "%Y-%m-%d %H:%M:%S")
-        print(batch_frequency)
         logging.debug(
             f"""----------Update Geometry Function has been started for {start_batch_date} to {end_batch_date} with batch frequency {batch_frequency.value} days----------""")
         looping_date = start_batch_date
@@ -187,7 +184,7 @@ if __name__ == '__main__':
     try:
         connect = Insight()
         max_timestamp, min_timestamp = connect.getMax_osm_element_history_timestamp()
-        """Passing Whole Osm element with per yearly Batch for now"""
+        """Passing Whole Osm element with per yearly Batch for now This function can be imported and reused in other scripts """
         connect.batch_update(min_timestamp, max_timestamp,
                              BatchFrequency.YEARLY)
     except Exception as e:
