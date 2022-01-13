@@ -13,7 +13,33 @@ from psycopg2 import *
 from psycopg2.extras import *
 import connection
 import sys
+from enum import Enum
+import datetime
+from dateutil.relativedelta import relativedelta
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.DEBUG)
+
+
+class BatchFrequency(Enum):
+    DAILY = 1
+    WEEKLY = 7
+    MONTHLY = 30
+    QUARTERLY = 120
+    YEARLY = 365
+
+def assign_end_wrt_frequency(start,frequency):
+    if frequency == BatchFrequency.YEARLY:
+        end=start+relativedelta(years=1)
+    if frequency == BatchFrequency.MONTHLY:
+        end=start+relativedelta(months=1)
+    if frequency == BatchFrequency.QUARTERLY:
+        end=start+relativedelta(months=4)
+    if frequency == BatchFrequency.WEEKLY:
+        end=start+relativedelta(days=7)
+    if frequency == BatchFrequency.DAILY:
+        end=start+relativedelta(days=1)  
+    return end
+        
+    
 
 class Database :
     """[Database Class responsible for connection , query execution and time tracking, can be used from multiple funtion and class returns result ,connection and cursor]
@@ -91,68 +117,77 @@ class Insight:
         self.con, self.cur = self.database.connect()
         self.params = parameters
 
-    def getMax_osm_element_history_id(self):
+    def getMax_osm_element_history_timestamp(self):
         """Function to extract latest maximum osm element id and minimum osm element id present in Osm_element_history Table"""
         
         query = f'''
-                select min(id) as minimum , max(id) as maximum from  public.osm_element_history;
+                select min("timestamp") as minimum , max("timestamp") as maximum from  public.osm_element_history;
                 '''
         record=self.database.executequery(query)
-        logging.debug(f"""Maximum Osm element history fetched is {record[0][1]} and minimum is  {record[0][0]}""")
+        logging.debug(f"""Maximum Osm element history timestamp fetched is {record[0][1]} and minimum is  {record[0][0]}""")
         return record[0][1],record[0][0]
 
     def update_geom(self,start,end):
         """Function that updates geometry column of osm_element_history"""
-        base_query = f"""update
+        query = f"""update
             osm_element_history as oeh
                             set
             geom =
             case
-                when oeh.type = 'node' then ST_MakePoint(oeh.lon,
+                when (oeh.type = 'node'  and oeh.geom = ST_MakePoint(oeh.lat, oeh.lon)) then ST_MakePoint(oeh.lon,
                 oeh.lat)
                 when oeh.type = 'way' then public.construct_geometry(oeh.nds,
                 oeh.id,
                 oeh."timestamp")
-                else 
-                    Null
             end
         where
             oeh.action != 'delete'
-            and oeh.type != 'relation'"""
+            and oeh.type != 'relation'
+            and "timestamp" >= '{start}' and "timestamp" < '{end}'"""
         
-        for i in range(int(start),int(end)):
-            query =base_query+ f""" and oeh.id={i}"""
-            result=self.database.executequery(query)
-            logging.debug(f"""Done-{i}/{max_element_id} : {result}""")
+        result=self.database.executequery(query)
+        logging.debug(f"""Changed Row : {result}""")
                    
         
     
-    def batch_update(self,start_batch,end_batch,batch_frequency):
-        """Upadtes Geometry with batch , given start element id , end element id to look for along with batch frequency , Here Batch frequency means frequency that you want to run a batch with, This function is made with the purpose for future usage as well if we want to update specific osm id from and to only beside scanning whole table"""
+    def batch_update(self,start_batch_date,end_batch_date,batch_frequency):
+        """Upadtes Geometry with batch , given start timestamp , end timestamp to look for along with batch frequency , Here Batch frequency means frequency that you want to run a batch with, Currently Supported : DAILY,WEEKLY,MONTHLY,QUARTERLY,YEARLY. This function is made with the purpose for future usage as well if we want to update specific element between timestamp"""
+        #BatchFrequency.DAILY
         batch_start_time = time.time()
-        logging.debug(f"""----------Update Geometry Function has been started for {start_batch} to {end_batch} with batch frequency {batch_frequency}----------""")
-        updated_row=start_batch
-        
-        while updated_row < end_batch:
+            # Type checking
+        if not isinstance(batch_frequency, BatchFrequency):
+            raise TypeError('Batch Frequency Invalid')
+        # Considering date is in yyyy-mm-dd H:M:S format
+        # start_batch_date = datetime.datetime.strptime(start, "%Y-%m-%d %H:%M:%S")
+        # end_batch_date = datetime.datetime.strptime(end, "%Y-%m-%d %H:%M:%S")
+        print(batch_frequency)
+        logging.debug(f"""----------Update Geometry Function has been started for {start_batch_date} to {end_batch_date} with batch frequency {batch_frequency.value} days----------""")
+        looping_date=start_batch_date
+        loop_count=1
+        while looping_date <= end_batch_date:
             start_time = time.time()
-            start=updated_row
-            end=start+batch_frequency
-            self.update_geom(start,end) 
-            logging.debug(f"""Batch Update from {start} Until {end} , Completed in {(time.time() - start_time)} Seconds""")
-            updated_row=end
+            start_date=looping_date
+            end_date=assign_end_wrt_frequency(start_date,batch_frequency)
+
+            # if loop_count!=1 :
+            #     start_date+=datetime.timedelta(1) 
+            self.update_geom(start_date,end_date) 
+            logging.debug(f"""Batch {loop_count} Geometry Update from {start_date} to {end_date} , Completed in {(time.time() - start_time)} Seconds""")
+            loop_count +=1
+            looping_date=end_date
+
             
         #closing connection   
         self.database.close_conn()  
-        logging.debug("-----Updating Geometry Took-- %s seconds -----" % (time.time() - batch_start_time))
+        logging.debug(f"""-----Updating Geometry Took-- {(time.time() - batch_start_time)} seconds for {start_batch_date} to {end_batch_date} with batch frequency {batch_frequency.value} days-----""")
 
 # The parser is only called if this script is called as a script/executable (via command line) but not when imported by another script
 if __name__=='__main__': 
     try:
         connect=Insight()
-        max_element_id,min_element_id= connect.getMax_osm_element_history_id()
-        """Passing Whole Osm element with per 500000 Batch for now"""
-        connect.batch_update(min_element_id,max_element_id,100)
+        max_timestamp,min_timestamp= connect.getMax_osm_element_history_timestamp()
+        """Passing Whole Osm element with per yearly Batch for now"""
+        connect.batch_update(min_timestamp,max_timestamp,BatchFrequency.YEARLY)
     except Exception as e:
-        logging.debug (e)
+        logging.error (e)
         sys.exit(1) 
-
