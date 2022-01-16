@@ -186,7 +186,7 @@ if __name__ == '__main__':
         max_timestamp, min_timestamp = connect.getMax_osm_element_history_timestamp()
         """Passing Whole Osm element with per yearly Batch for now This function can be imported and reused in other scripts """
         connect.batch_update(min_timestamp, max_timestamp,
-                             BatchFrequency.YEARLY)
+                             BatchFrequency.MONTHLY)
     except Exception as e:
         logging.error(e)
         sys.exit(1)
