@@ -137,17 +137,17 @@ set geom = case
             oeh.type = 'node' 
             and (oeh.geom = ST_MakePoint(oeh.lat, oeh.lon) or oeh.geom is null)
         ) then ST_MakePoint(oeh.lon, oeh.lat)
-        when oeh.type = 'way' then public.construct_geometry(
+        when oeh.type = 'way' and (oeh.geom is null or ST_GeometryType(geom) = 'ST_Point') then public.construct_geometry(
             oeh.nds,
             oeh.id,
             oeh."timestamp"
         )
+        else oeh.geom
     end
 where oeh.action != 'delete'
     and oeh.type != 'relation'
     and oeh."timestamp" >= '{start}'
     and oeh."timestamp" < '{end}'"""
-
         result = self.database.executequery(query)
         logging.debug(f"""Changed Row : {result}""")
 
