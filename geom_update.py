@@ -141,9 +141,11 @@ set geom = case
             and (oeh.geom = ST_MakePoint(oeh.lat, oeh.lon) or oeh.geom is null)
         ) then ST_MakePoint(oeh.lon, oeh.lat)
         when oeh.type = 'way'  then public.construct_geometry(
-            oeh.nds,
             oeh.id,
-            oeh."timestamp"
+            oeh.version,
+            oeh."timestamp",
+            oeh.nds,
+            oeh.changeset      
         )
         else oeh.geom
     end
