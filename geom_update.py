@@ -15,29 +15,35 @@ import connection
 import sys
 from enum import Enum
 import datetime
+import argparse
+
 from dateutil.relativedelta import relativedelta
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.DEBUG)
 
 
 class BatchFrequency(Enum):
-    DAILY = 1
-    WEEKLY = 7
-    MONTHLY = 30
-    QUARTERLY = 120
-    YEARLY = 365
-
+    DAILY = 'd'
+    WEEKLY = 'w'
+    MONTHLY = 'm'
+    QUARTERLY = 'q'
+    YEARLY = 'y'
+    
+    def __str__(self):
+        return self.value
 
 def assign_end_wrt_frequency(start, frequency):
+    logging.debug( f"""frequency Osm  {frequency}""")
+        
     if frequency == BatchFrequency.YEARLY:
-        end = start+relativedelta(years=1)
+        end = start-relativedelta(years=1)
     if frequency == BatchFrequency.MONTHLY:
-        end = start+relativedelta(months=1)
+        end = start-relativedelta(months=1)
     if frequency == BatchFrequency.QUARTERLY:
-        end = start+relativedelta(months=4)
+        end = start-relativedelta(months=4)
     if frequency == BatchFrequency.WEEKLY:
-        end = start+relativedelta(days=7)
+        end = start-relativedelta(days=7)
     if frequency == BatchFrequency.DAILY:
-        end = start+relativedelta(days=1)
+        end = start-relativedelta(days=1)
     return end
 
 
@@ -131,23 +137,26 @@ class Insight:
 
     def update_geom(self, start, end):
         """Function that updates geometry column of osm_element_history"""
+        # and (oeh.geom is null or ST_GeometryType(geom) = 'ST_Point')
         query = f"""update osm_element_history as oeh
 set geom = case
         when (
             oeh.type = 'node' 
             and (oeh.geom = ST_MakePoint(oeh.lat, oeh.lon) or oeh.geom is null)
         ) then ST_MakePoint(oeh.lon, oeh.lat)
-        when oeh.type = 'way' then public.construct_geometry(
-            oeh.nds,
+        when oeh.type = 'way'  then public.construct_geometry(
             oeh.id,
-            oeh."timestamp"
+            oeh.version,
+            oeh."timestamp",
+            oeh.nds,
+            oeh.changeset      
         )
+        else oeh.geom
     end
 where oeh.action != 'delete'
     and oeh.type != 'relation'
     and oeh."timestamp" >= '{start}'
     and oeh."timestamp" < '{end}'"""
-
         result = self.database.executequery(query)
         logging.debug(f"""Changed Row : {result}""")
 
@@ -160,13 +169,13 @@ where oeh.action != 'delete'
             raise TypeError('Batch Frequency Invalid')
         # Considering date is in yyyy-mm-dd H:M:S format
         logging.debug(
-            f"""----------Update Geometry Function has been started for {start_batch_date} to {end_batch_date} with batch frequency {batch_frequency.value} days----------""")
-        looping_date = start_batch_date
+            f"""----------Update Geometry Function has been started for {start_batch_date} to {end_batch_date} with batch frequency {batch_frequency.value}----------""")
+        looping_date = end_batch_date
         loop_count = 1
-        while looping_date <= end_batch_date:
+        while looping_date >= start_batch_date:
             start_time = time.time()
-            start_date = looping_date
-            end_date = assign_end_wrt_frequency(start_date, batch_frequency)
+            end_date = looping_date
+            start_date = assign_end_wrt_frequency(end_date, batch_frequency)
             self.update_geom(start_date, end_date)
             logging.debug(
                 f"""Batch {loop_count} Geometry Update from {start_date} to {end_date} , Completed in {(time.time() - start_time)} Seconds""")
@@ -176,17 +185,27 @@ where oeh.action != 'delete'
         # closing connection
         self.database.close_conn()
         logging.debug(
-            f"""-----Updating Geometry Took-- {(time.time() - batch_start_time)} seconds for {start_batch_date} to {end_batch_date} with batch frequency {batch_frequency.value} days-----""")
+            f"""-----Updating Geometry Took-- {(time.time() - batch_start_time)} seconds for {start_batch_date} to {end_batch_date} with batch frequency {batch_frequency.value} -----""")
 
 
 # The parser is only called if this script is called as a script/executable (via command line) but not when imported by another script
 if __name__ == '__main__':
+    #connection to the database
+    connect = Insight()
+    """You can get min and max timestamp available in the table as well which will be default or you can pass it through arguments"""
+    max_timestamp, min_timestamp = connect.getMax_osm_element_history_timestamp()
+    argParser = argparse.ArgumentParser(description="Updates Geometry of Osm Element History Table")
+    argParser.add_argument('-start', '--start', action='store',type=lambda s: datetime.datetime.strptime(s, '%Y-%m-%d'), dest='start',default=min_timestamp, help='The start date of updating geometry, Default is minimum timestamp of table')
+    argParser.add_argument('-end', '--end', action='store',type=lambda s: datetime.datetime.strptime(s, '%Y-%m-%d'), dest='end',default=max_timestamp, help='The end date of updating geometry , Default is maximum timestamp of table')
+    argParser.add_argument('-f', '--f', action='store', type=BatchFrequency, choices=list(BatchFrequency), dest='f',default='m', help='Frequency for Batch, Default is Monthly')
+    
+    args = argParser.parse_args()
     try:
-        connect = Insight()
-        max_timestamp, min_timestamp = connect.getMax_osm_element_history_timestamp()
-        """Passing Whole Osm element with per yearly Batch for now This function can be imported and reused in other scripts """
-        connect.batch_update(min_timestamp, max_timestamp,
-                             BatchFrequency.MONTHLY)
+        # Note : You can not run function forward , if you want to update geometry of 2020 you need to pass  2020-12-30 to 2020-01-01
+        # """This function can be imported and reused in other scripts """
+        connect.batch_update(args.start, args.end,
+                            args.f)
     except Exception as e:
         logging.error(e)
         sys.exit(1)
+

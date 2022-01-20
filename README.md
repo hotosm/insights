@@ -147,6 +147,8 @@ Additional dependencies setup:
 * `pip install lxml`
 * `create extension hstore` against the Postgres database
 * `pip install bz2file`
+* `pip install python-dateutil`
+
 
 4 GB RAM and 2vCPU cloud instance (AWS c5a.large) is used in practical implementation of running OSMH
 ## OSMH Setup
