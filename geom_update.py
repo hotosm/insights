@@ -155,8 +155,8 @@ set geom = case
     end
 where oeh.action != 'delete'
     and oeh.type != 'relation'
-    and oeh."timestamp" >= '{start}'
-    and oeh."timestamp" < '{end}'"""
+    and oeh."timestamp" <= '{start}'
+    and oeh."timestamp" > '{end}'"""
         result = self.database.executequery(query)
         logging.debug(f"""Changed Row : {result}""")
 
@@ -170,15 +170,15 @@ where oeh.action != 'delete'
         # Considering date is in yyyy-mm-dd H:M:S format
         logging.debug(
             f"""----------Update Geometry Function has been started for {start_batch_date} to {end_batch_date} with batch frequency {batch_frequency.value}----------""")
-        looping_date = end_batch_date
+        looping_date = start_batch_date
         loop_count = 1
-        while looping_date >= start_batch_date:
+        while looping_date >= end_batch_date:
             start_time = time.time()
-            end_date = looping_date
-            start_date = assign_end_wrt_frequency(end_date, batch_frequency)
+            start_date = looping_date
+            end_date = assign_end_wrt_frequency(start_date, batch_frequency)
             self.update_geom(start_date, end_date)
             logging.debug(
-                f"""Batch {loop_count} Geometry Update from {start_date} to {end_date} , Completed in {(time.time() - start_time)} Seconds""")
+                f"""Batch {loop_count} Geometry Update from {end_date} to {start_date} , Completed in {(time.time() - start_time)} Seconds""")
             loop_count += 1
             looping_date = end_date
 
