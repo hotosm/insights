@@ -60,20 +60,36 @@ class hashtags():
                     sum((osh.tags ? 'highway' and (osh."action" =  'modify'))::int) modified_highway,
                     sum ( 
                     case 
-                        when (osh.tags ? 'highway' and  (osh."action" =  'create')) then ST_Length(public.construct_geometry(osh.nds,osh.id,osh."timestamp")::geography)
+                        when (osh.tags ? 'highway' and  (osh."action" =  'create')) then ST_Length(public.construct_geometry(osh.id,
+                            osh.version,
+                            osh."timestamp",
+                            osh.nds,
+                            osh.changeset)::geography)
                         else 0
                     end
                     ) added_highway_meters,
                     sum ( 
                     case 
-                        when (osh.tags ? 'highway' and  (osh."action" =  'modify')) then ST_Length(public.construct_geometry(osh.nds,osh.id,osh."timestamp")::geography)
+                        when (osh.tags ? 'highway' and  (osh."action" =  'modify')) then ST_Length(public.construct_geometry(osh.id,
+                            osh.version,
+                            osh."timestamp",
+                            osh.nds,
+                            osh.changeset)::geography)
                         else 0
                     end)  modified_highway_meters
                     from public.osm_element_history osh
                     where "type" in ('way','relation')
                     and "action" != 'delete'
                     and osh.changeset between {counter - 10000} and {counter}
-                    group by changeset on conflict do nothing;
+                    group by changeset on conflict (changeset) DO UPDATE 
+                    SET added_buildings = EXCLUDED.added_buildings ,
+                        modified_buildings = EXCLUDED.modified_buildings,
+                        added_amenity = EXCLUDED.added_amenity,
+                        modified_amenity=EXCLUDED.modified_amenity,
+                        added_highway=EXCLUDED.added_highway,
+                        modified_highway=EXCLUDED.modified_highway,
+                        added_highway_meters=EXCLUDED.added_highway_meters,
+                        modified_highway_meters= EXCLUDED.modified_highway_meters;;
 
                     '''
             print(f'{datetime.now()} Calculating changesets stats from changesets IDs {num_format(counter - 10000)} to {num_format(counter)}')
@@ -108,20 +124,38 @@ class hashtags():
                     sum((osh.tags ? 'highway' and (osh."action" =  'modify'))::int) modified_highway,
                     sum ( 
                     case 
-                        when (osh.tags ? 'highway' and  (osh."action" =  'create')) then ST_Length(public.construct_geometry(osh.nds,osh.id,osh."timestamp")::geography)
+                        when (osh.tags ? 'highway' and  (osh."action" =  'create')) then ST_Length(public.construct_geometry(
+                             osh.id,
+                            osh.version,
+                            osh."timestamp",
+                            osh.nds,
+                            osh.changeset)::geography)
                         else 0
                     end
                     ) added_highway_meters,
                     sum ( 
                     case 
-                        when (osh.tags ? 'highway' and  (osh."action" =  'modify')) then ST_Length(public.construct_geometry(osh.nds,osh.id,osh."timestamp")::geography)
+                        when (osh.tags ? 'highway' and  (osh."action" =  'modify')) then ST_Length(
+                            public.construct_geometry(osh.id,
+                            osh.version,
+                            osh."timestamp",
+                            osh.nds,
+                            osh.changeset)::geography)
                         else 0
                     end)  modified_highway_meters
                     from public.osm_element_history osh
                 where "type" in ('way','relation')
                 and "action" != 'delete'
                 and osh.changeset > {record['latest_changeset']}
-                group by changeset  ;
+                group by changeset  on conflict (changeset) DO UPDATE 
+               SET added_buildings = EXCLUDED.added_buildings ,
+              	   	modified_buildings = EXCLUDED.modified_buildings,
+              	    added_amenity = EXCLUDED.added_amenity,
+              	    modified_amenity=EXCLUDED.modified_amenity,
+              	    added_highway=EXCLUDED.added_highway,
+              	    modified_highway=EXCLUDED.modified_highway,
+                    added_highway_meters=EXCLUDED.added_highway_meters,
+                    modified_highway_meters= EXCLUDED.modified_highway_meters; ;
 
                 '''
         cursor.execute(sql)
