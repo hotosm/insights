@@ -32,6 +32,8 @@ class BatchFrequency(Enum):
         return self.value
 
 def assign_end_wrt_frequency(start, frequency):
+    logging.debug( f"""frequency Osm  {frequency}""")
+        
     if frequency == BatchFrequency.YEARLY:
         end = start-relativedelta(years=1)
     if frequency == BatchFrequency.MONTHLY:
@@ -168,13 +170,13 @@ where oeh.action != 'delete'
         # Considering date is in yyyy-mm-dd H:M:S format
         logging.debug(
             f"""----------Update Geometry Function has been started for {start_batch_date} to {end_batch_date} with batch frequency {batch_frequency.value}----------""")
-        looping_date = start_batch_date
+        looping_date = end_batch_date
         loop_count = 1
-        while looping_date >= end_batch_date:
+        while looping_date >= start_batch_date:
             start_time = time.time()
-            start_date = looping_date
-            end_date = assign_end_wrt_frequency(start_date, batch_frequency)
-            # self.update_geom(start_date, end_date)
+            end_date = looping_date
+            start_date = assign_end_wrt_frequency(end_date, batch_frequency)
+            self.update_geom(start_date, end_date)
             logging.debug(
                 f"""Batch {loop_count} Geometry Update from {start_date} to {end_date} , Completed in {(time.time() - start_time)} Seconds""")
             loop_count += 1
