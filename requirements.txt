@@ -2,3 +2,4 @@ pyyaml
 lxml
 bz2file
 python-dateutil
+psycopg2
