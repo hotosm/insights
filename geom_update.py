@@ -32,7 +32,7 @@ class BatchFrequency(Enum):
         return self.value
 
 def assign_end_wrt_frequency(start, frequency):
-    logging.debug( f"""frequency Osm  {frequency}""")
+#     logging.debug( f"""frequency Osm  {frequency}""")
         
     if frequency == BatchFrequency.YEARLY:
         end = start-relativedelta(years=1)
