@@ -41,9 +41,10 @@ class hashtags():
         print("Maximum changeset id in osm_changeset table =",record['latest_changeset'])
         return record['latest_changeset']
     
-    def create(self,connection):
+    def create(self,connection,maxChangeset):
         self.createTables(connection)
-        maxChangeset = self.getMaxChangeset(connection)
+        #getMaxChangeset if it is not a parameter 
+        maxChangeset = self.getMaxChangeset(connection) if maxChangeset is None else int(maxChangeset)
         print(f"The script will scan all changesets starting from {num_format(maxChangeset)} backward")
         cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
        
@@ -185,6 +186,7 @@ argParser.add_argument('-u', '--user', action='store', dest='dbUser', default=No
 argParser.add_argument('-p', '--password', action='store', dest='dbPass', default=None, help='Database password')
 argParser.add_argument('-d', '--database', action='store', dest='dbName', default=None, help='Target database')
 argParser.add_argument('-U', '--update', action='store_true', dest='update', default=False, help='Top update the changetset statistics after the latest calculated changeset')
+argParser.add_argument('-c', '--changeset', action='store', dest='maxChangeset', default=None, help='Maximum changeset ID to start from')
 
 args = argParser.parse_args()
 
@@ -218,7 +220,7 @@ md = hashtags()
 if (args.update):
     md.update(conn)
 else:
-    md.create(conn)
+    md.create(conn,args.maxChangeset)
 
 endTime = datetime.now()
 timeCost = endTime - beginTime
