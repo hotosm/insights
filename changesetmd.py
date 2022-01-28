@@ -64,6 +64,27 @@ class ChangesetMD():
             psycopg2.extras.execute_batch(cursor, sql, data_arr)
             cursor.close()
 
+    def insertNewBatchTags(self, connection, changesets):
+        cursor = connection.cursor()
+        data_arr = []
+        for changeset in changesets:
+            data_arr.append((changeset[11],changeset[11],'#%'))
+            # print(changeset[11])
+        sql = '''
+            INSERT into all_osm_hashtags
+            select hashtag from (
+                select trim(unnest(regexp_split_to_array(%s::hstore -> 'hashtags',E'[\\s,;]'))) hashtag
+            union
+                select trim(unnest(regexp_split_to_array(%s::hstore -> 'comment',E'[\\s;,.@]'))) hashtag
+            ) t 
+            where t.hashtag like %s
+            on conflict do nothing;
+                '''
+                
+        psycopg2.extras.execute_batch(cursor, sql, data_arr)
+        print ('Updated new hashtags in all_osm_hashtags')
+        cursor.close()
+       
     def insertNewBatchComment(self, connection, comment_arr):
         cursor=connection.cursor()
         sql = '''INSERT into osm_changeset_comment
@@ -120,6 +141,9 @@ class ChangesetMD():
             if((parsedCount % 100000) == 0):
                 self.insertNewBatch(connection, changesets)
                 self.insertNewBatchComment(connection, comments )
+                # If replication reading, we need to update the all+osm_hashtags tags using changesets tags
+                if(doReplication):
+                    self.insertNewBatchTags(connection, changesets )
                 connection.commit()
                 changesets = []
                 comments = []
@@ -133,6 +157,8 @@ class ChangesetMD():
         # Update whatever is left, then commit
         self.insertNewBatch(connection, changesets)
         self.insertNewBatchComment(connection, comments)
+        if(doReplication):
+            self.insertNewBatchTags(connection, changesets )
         connection.commit()
         print ("parsing complete")
         print ("parsed {:,}".format(parsedCount))
