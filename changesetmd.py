@@ -66,23 +66,25 @@ class ChangesetMD():
 
     def insertNewBatchTags(self, connection, changesets):
         cursor = connection.cursor()
-        data_arr = []
+        
         for changeset in changesets:
-            data_arr.append((changeset[11].get('hashtags',''),changeset[11].get('comment',''),'#%'))
             # print(changeset[11].get('hashtags',''),changeset[11].get('comment',''))
-        sql = '''
-            INSERT into all_osm_hashtags
-            select hashtag from (
-                select trim(unnest(regexp_split_to_array(%s,E'[\\s,;]'))) hashtag
-            union
-                select trim(unnest(regexp_split_to_array(%s,E'[\\s;,.@]'))) hashtag
-            ) t 
-            where t.hashtag like %s
-            on conflict do nothing;
-                '''
+            sql = f'''
+                INSERT into all_osm_hashtags
+                select hashtag from (
+                    select trim(unnest(regexp_split_to_array(\'\'\'{changeset[11].get('hashtags','')}\'\'\',E'[\\\\s,;]'))) hashtag
+                union
+                    select trim(unnest(regexp_split_to_array(\'\'\'{changeset[11].get('comment','').replace("'","''")}\'\'\',E'[\\\\s;,.@]'))) hashtag
+                ) t 
+                where t.hashtag like '#%'
+                on conflict do nothing;
+                    '''
+            # print(sql)
+            cursor.execute(sql)
                 
-        psycopg2.extras.execute_batch(cursor, sql, data_arr)
+        
         print ('Updated new hashtags in all_osm_hashtags')
+        connection.commit()
         cursor.close()
        
     def insertNewBatchComment(self, connection, comment_arr):
