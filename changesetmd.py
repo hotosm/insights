@@ -68,14 +68,14 @@ class ChangesetMD():
         cursor = connection.cursor()
         data_arr = []
         for changeset in changesets:
-            data_arr.append((changeset[11],changeset[11],'#%'))
-            # print(changeset[11])
+            data_arr.append((changeset[11].get('hashtags',''),changeset[11].get('comment',''),'#%'))
+            # print(changeset[11].get('hashtags',''),changeset[11].get('comment',''))
         sql = '''
             INSERT into all_osm_hashtags
             select hashtag from (
-                select trim(unnest(regexp_split_to_array(%s::hstore -> 'hashtags',E'[\\s,;]'))) hashtag
+                select trim(unnest(regexp_split_to_array(%s,E'[\\s,;]'))) hashtag
             union
-                select trim(unnest(regexp_split_to_array(%s::hstore -> 'comment',E'[\\s;,.@]'))) hashtag
+                select trim(unnest(regexp_split_to_array(%s,E'[\\s;,.@]'))) hashtag
             ) t 
             where t.hashtag like %s
             on conflict do nothing;
