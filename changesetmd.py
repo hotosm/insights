@@ -72,14 +72,14 @@ class ChangesetMD():
             sql = f'''
                 INSERT into all_osm_hashtags
                 select hashtag from (
-                    select trim(unnest(regexp_split_to_array(\'\'\'{changeset[11].get('hashtags','')}\'\'\',E'[\\\\s,;]'))) hashtag
+                    select trim(unnest(regexp_split_to_array(\'{changeset[11].get('hashtags',"")}\',E'[\\\\s,;]'))) hashtag
                 union
-                    select trim(unnest(regexp_split_to_array(\'\'\'{changeset[11].get('comment','').replace("'","''")}\'\'\',E'[\\\\s;,.@]'))) hashtag
+                    select trim(unnest(regexp_split_to_array(\'{changeset[11].get('comment',"").replace("'","''")}\',E'[\\\\s;,.@]'))) hashtag
                 ) t 
                 where t.hashtag like '#%'
                 on conflict do nothing;
                     '''
-            # print(sql)
+            print(sql)
             cursor.execute(sql)
                 
         
