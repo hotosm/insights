@@ -92,7 +92,7 @@ class hashtags():
                     	(osh."action" =  'modify') )::int) modified_places
                     from public.osm_element_history osh
                     where "action" != 'delete'
-                    and osh."timestamp" between '{counter - timedelta(days=1)}' and '{counter}'
+                    and osh."timestamp" between '{counter - timedelta(hours=1)}' and '{counter}'
                     group by changeset on conflict (changeset) DO UPDATE 
                SET added_buildings = EXCLUDED.added_buildings ,
               	   	modified_buildings = EXCLUDED.modified_buildings,
@@ -106,10 +106,10 @@ class hashtags():
               	    modified_places=EXCLUDED.modified_places;
 
                     '''
-            print(f'{datetime.now()} Calculating changesets stats from changesets between {counter - timedelta(days=1)} to {counter}')
+            print(f'{datetime.now()} Calculating changesets stats from changesets between {counter - timedelta(hours=1)} to {counter}')
             cursor.execute(sql)
             connection.commit()
-            counter = counter - timedelta(days=1)
+            counter = counter - timedelta(hours=1)
 
         cursor.close()
     
