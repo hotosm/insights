@@ -133,7 +133,11 @@ class hashtags():
         beginTime = datetime.now()
         sql = f'''
                         select sum (s.added_buildings) total_new_buildings,
-		                sum (s.added_highway_meters) total_new_road_meters
+		                sum (s.added_highway_meters) total_new_road_meters,
+		                sum (s.added_amenity) total_new_amenity,
+		                sum (s.modified_amenity) total_modified_amenity,
+		                sum (s.added_places) total_new_places,
+		                sum (s.modified_places) total_modified_places
                         from all_changesets_stats s join public.osm_changeset c on s.changeset  = c.id 
                         where c.created_at between '{start}' and '{end}'
                         and (
@@ -141,16 +145,19 @@ class hashtags():
                             (c.tags -> 'comment') ~~* '%#{hashtag}' or (c.tags -> 'hashtags') ~~* '%#{hashtag}'	
                             );
                 '''
-        print (f'Calculating new buildings/highway meters for {hashtag} between {start} and {end}')
+        print (f'Calculating new buildings/highway/Amenity/Places meters for {hashtag} between {start} and {end}')
         
         cursor.execute(sql)                
         values = cursor.fetchone()
         buildingCount = 0 if values[0] is None else values[0]
         highwayMeters = 0 if values['total_new_road_meters'] is None else values['total_new_road_meters']
-        
+        newAmenity = 0 if values['total_new_amenity'] is None else values['total_new_amenity']
+        modifiedAmenity = 0 if values['total_modified_amenity'] is None else values['total_modified_amenity']
+        newPlaces = 0 if values['total_new_places'] is None else values['total_new_places']
+        modifiedPlaces = 0 if values['total_modified_places'] is None else values['total_modified_places']
         print (f'Calculated {buildingCount} new buildings and {highwayMeters} meter(s) of roads for {hashtag} between {start} and {end} is done in {datetime.now() - beginTime}')
 
-        return [buildingCount,highwayMeters]    
+        return [buildingCount,highwayMeters,newAmenity,modifiedAmenity ,newPlaces,modifiedPlaces]
 
     def buildWeeklyStats(self,connection,hashtag ,hashtagId, startDate,endDate):
         cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -169,13 +176,13 @@ class hashtags():
         
         while nextFridayDate <= endDate:
             if(not self.checkIfExists(connection,fridayDate,nextFridayDate,hashtagId)):
-                [buildingCount,highwayMeters] = self.getTotalBuildingsHighways(cursor,fridayDate,nextFridayDate,hashtag)
+                [buildingCount,highwayMeters,newAmenity,modifiedAmenity ,newPlaces,modifiedPlaces] = self.getTotalBuildingsHighways(cursor,fridayDate,nextFridayDate,hashtag)
                 # Do contributors
                 contributorsCount = self.getTotalUniqueContributors(cursor,fridayDate,nextFridayDate,hashtag)
                 insert = f'''
                 INSERT INTO public.hashtag_stats
-                        (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_km, calc_date)
-                        VALUES({hashtagId}, 'w', '{fridayDate}' , '{nextFridayDate}',{buildingCount} , {contributorsCount} , {highwayMeters}, now())  on conflict do nothing ;
+                        (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_km, calc_date, total_new_amenity, total_modified_amenity, total_new_places, total_modified_places)
+                        VALUES({hashtagId}, 'w', '{fridayDate}' , '{nextFridayDate}',{buildingCount} , {contributorsCount} , {highwayMeters}, now(),{newAmenity},{modifiedAmenity},{newPlaces},{modifiedPlaces})  on conflict do nothing ;
                     ''' 
                 cursor.execute(insert)
                 connection.commit()
@@ -244,13 +251,13 @@ class hashtags():
         
         while endOftheMonth <= endDate:
             if(not self.checkIfExists(connection,beginingDate,endOftheMonth,hashtagId)):
-                [buildingCount,highwayMeters] = self.getTotalBuildingsHighways(cursor,beginingDate,endOftheMonth,hashtag)
+                [buildingCount,highwayMeters,newAmenity,modifiedAmenity ,newPlaces,modifiedPlaces] = self.getTotalBuildingsHighways(cursor,beginingDate,endOftheMonth,hashtag)
                 # Do contributors
                 contributorsCount = self.getTotalUniqueContributors(cursor,beginingDate,endOftheMonth,hashtag)
                 insert = f'''
                 INSERT INTO public.hashtag_stats
-                        (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_km, calc_date)
-                        VALUES({hashtagId}, 'm', '{beginingDate}' , '{endOftheMonth}',{buildingCount} , {contributorsCount} , {highwayMeters}, now())  on conflict do nothing ;
+                        (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_km, calc_date, total_new_amenity, total_modified_amenity, total_new_places, total_modified_places)
+                        VALUES({hashtagId}, 'm', '{beginingDate}' , '{endOftheMonth}',{buildingCount} , {contributorsCount} , {highwayMeters}, now(),{newAmenity},{modifiedAmenity},{newPlaces},{modifiedPlaces})  on conflict do nothing ;
                     ''' 
                 cursor.execute(insert)
                 connection.commit()
@@ -291,13 +298,13 @@ class hashtags():
         endOfTheQuarter = self.getNextQuarter(beginingDate)
         while endOfTheQuarter <= endDate:
             if(not self.checkIfExists(connection,beginingDate,endOfTheQuarter,hashtagId)):
-                [buildingCount,highwayMeters] = self.getTotalBuildingsHighways(cursor,beginingDate,endOfTheQuarter,hashtag)
+                [buildingCount,highwayMeters,newAmenity,modifiedAmenity ,newPlaces,modifiedPlaces] = self.getTotalBuildingsHighways(cursor,beginingDate,endOfTheQuarter,hashtag)
                 # Do contributors
                 contributorsCount = self.getTotalUniqueContributors(cursor,beginingDate,endOfTheQuarter,hashtag)
                 insert = f'''
                 INSERT INTO public.hashtag_stats
-                        (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_km, calc_date)
-                        VALUES({hashtagId}, 'q', '{beginingDate}' , '{endOfTheQuarter}',{buildingCount} , {contributorsCount} , {highwayMeters}, now())  on conflict do nothing ;
+                        (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_km, calc_date, total_new_amenity, total_modified_amenity, total_new_places, total_modified_places)
+                        VALUES({hashtagId}, 'q', '{beginingDate}' , '{endOfTheQuarter}',{buildingCount} , {contributorsCount} , {highwayMeters}, now(),{newAmenity},{modifiedAmenity},{newPlaces},{modifiedPlaces})  on conflict do nothing ;
                     ''' 
                 cursor.execute(insert)
                 connection.commit()
@@ -324,13 +331,13 @@ class hashtags():
         endOfTheYear =  datetime(beginingDate.year + 1 ,1,1)
         while endOfTheYear <= endDate:
             if(not self.checkIfExists(connection,beginingDate,endOfTheYear,hashtagId)):
-                [buildingCount,highwayMeters] = self.getTotalBuildingsHighways(cursor,beginingDate,endOfTheYear,hashtag)
+                [buildingCount,highwayMeters,newAmenity,modifiedAmenity ,newPlaces,modifiedPlaces] = self.getTotalBuildingsHighways(cursor,beginingDate,endOfTheYear,hashtag)
                 # Do contributors
                 contributorsCount = self.getTotalUniqueContributors(cursor,beginingDate,endOfTheYear,hashtag)
                 insert = f'''
                 INSERT INTO public.hashtag_stats
-                        (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_km, calc_date)
-                        VALUES({hashtagId}, 'y', '{beginingDate}' , '{endOfTheYear}',{buildingCount} , {contributorsCount} , {highwayMeters}, now())  on conflict do nothing ;
+                        (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_km, calc_date, total_new_amenity, total_modified_amenity, total_new_places, total_modified_places)
+                        VALUES({hashtagId}, 'y', '{beginingDate}' , '{endOfTheYear}',{buildingCount} , {contributorsCount} , {highwayMeters}, now(),{newAmenity},{modifiedAmenity},{newPlaces},{modifiedPlaces})  on conflict do nothing ;
                     ''' 
                 cursor.execute(insert)
                 connection.commit()
