@@ -49,7 +49,7 @@ class hashtags():
     def create(self,connection,maxTime):
         # self.createTables(connection)
         #getMaxChangeset if it is not a parameter 
-        maxTime = self.getMaxTime(connection) if maxTime is None else datetime.strptime(maxTime, '%y-%m-%d') 
+        maxTime = self.getMaxTime(connection) if maxTime is None else datetime.strptime(maxTime, '%Y-%m-%d') 
         print(f"The script will scan all changesets starting from {maxTime} backward")
         cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
        
