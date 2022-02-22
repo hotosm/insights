@@ -114,7 +114,7 @@ CREATE TABLE  if not exists public.hashtag_stats (
 	end_date timestamp NOT NULL,
 	total_new_buildings int4 NOT NULL,
 	total_uq_contributors int4 NOT NULL,
-	total_new_road_km int4 NULL,
+	total_new_road_m int4 NULL,
 	calc_date timestamp NOT NULL DEFAULT now(),
 	CONSTRAINT hashtag_stats_fk FOREIGN KEY (hashtag_id) REFERENCES public.hashtag(id)
 );

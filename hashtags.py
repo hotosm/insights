@@ -181,7 +181,7 @@ class hashtags():
                 contributorsCount = self.getTotalUniqueContributors(cursor,fridayDate,nextFridayDate,hashtag)
                 insert = f'''
                 INSERT INTO public.hashtag_stats
-                        (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_km, calc_date, total_new_amenity, total_modified_amenity, total_new_places, total_modified_places)
+                        (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_m, calc_date, total_new_amenity, total_modified_amenity, total_new_places, total_modified_places)
                         VALUES({hashtagId}, 'w', '{fridayDate}' , '{nextFridayDate}',{buildingCount} , {contributorsCount} , {highwayMeters}, now(),{newAmenity},{modifiedAmenity},{newPlaces},{modifiedPlaces})  on conflict do nothing ;
                     ''' 
                 cursor.execute(insert)
@@ -256,7 +256,7 @@ class hashtags():
                 contributorsCount = self.getTotalUniqueContributors(cursor,beginingDate,endOftheMonth,hashtag)
                 insert = f'''
                 INSERT INTO public.hashtag_stats
-                        (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_km, calc_date, total_new_amenity, total_modified_amenity, total_new_places, total_modified_places)
+                        (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_m, calc_date, total_new_amenity, total_modified_amenity, total_new_places, total_modified_places)
                         VALUES({hashtagId}, 'm', '{beginingDate}' , '{endOftheMonth}',{buildingCount} , {contributorsCount} , {highwayMeters}, now(),{newAmenity},{modifiedAmenity},{newPlaces},{modifiedPlaces})  on conflict do nothing ;
                     ''' 
                 cursor.execute(insert)
@@ -303,7 +303,7 @@ class hashtags():
                 contributorsCount = self.getTotalUniqueContributors(cursor,beginingDate,endOfTheQuarter,hashtag)
                 insert = f'''
                 INSERT INTO public.hashtag_stats
-                        (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_km, calc_date, total_new_amenity, total_modified_amenity, total_new_places, total_modified_places)
+                        (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_m, calc_date, total_new_amenity, total_modified_amenity, total_new_places, total_modified_places)
                         VALUES({hashtagId}, 'q', '{beginingDate}' , '{endOfTheQuarter}',{buildingCount} , {contributorsCount} , {highwayMeters}, now(),{newAmenity},{modifiedAmenity},{newPlaces},{modifiedPlaces})  on conflict do nothing ;
                     ''' 
                 cursor.execute(insert)
@@ -336,7 +336,7 @@ class hashtags():
                 contributorsCount = self.getTotalUniqueContributors(cursor,beginingDate,endOfTheYear,hashtag)
                 insert = f'''
                 INSERT INTO public.hashtag_stats
-                        (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_km, calc_date, total_new_amenity, total_modified_amenity, total_new_places, total_modified_places)
+                        (hashtag_id, "type", start_date, end_date, total_new_buildings, total_uq_contributors, total_new_road_m, calc_date, total_new_amenity, total_modified_amenity, total_new_places, total_modified_places)
                         VALUES({hashtagId}, 'y', '{beginingDate}' , '{endOfTheYear}',{buildingCount} , {contributorsCount} , {highwayMeters}, now(),{newAmenity},{modifiedAmenity},{newPlaces},{modifiedPlaces})  on conflict do nothing ;
                     ''' 
                 cursor.execute(insert)
