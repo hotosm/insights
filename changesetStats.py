@@ -46,16 +46,16 @@ class hashtags():
         print("Maximum time to scan from =",latestTime)
         return latestTime
     
-    def create(self,connection,maxTime):
+    def create(self,connection,maxChangeset):
         # self.createTables(connection)
         #getMaxChangeset if it is not a parameter 
-        maxTime = self.getMaxTime(connection) if maxTime is None else datetime.strptime(maxTime, '%Y-%m-%d') 
-        print(f"The script will scan all changesets starting from {maxTime} backward")
+        maxChangeset = self.getMaxChangeset(connection) if maxChangeset is None else int(maxChangeset)
+        print(f"The script will scan all changesets starting from {maxChangeset} backward")
         cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
        
-        counter = maxTime
+        counter = maxChangeset
 
-        while counter > datetime(2005,4,9): #2005-04-09 first changeset created date in OSM
+        while counter > 0: #2005-04-09 first changeset created date in OSM
             sql = f'''
                 insert into all_changesets_stats 
                 select osh.changeset , 
@@ -92,7 +92,7 @@ class hashtags():
                     	(osh."action" =  'modify') )::int) modified_places
                     from public.osm_element_history osh
                     where "action" != 'delete'
-                    and osh."timestamp" between '{counter - timedelta(hours=1)}' and '{counter}'
+                    and osh.changeset between '{counter - 50000}' and '{counter}'
                     group by changeset on conflict (changeset) DO UPDATE 
                SET added_buildings = EXCLUDED.added_buildings ,
               	   	modified_buildings = EXCLUDED.modified_buildings,
@@ -106,10 +106,10 @@ class hashtags():
               	    modified_places=EXCLUDED.modified_places;
 
                     '''
-            print(f'{datetime.now()} Calculating changesets stats from changesets between {counter - timedelta(hours=1)} to {counter}')
+            print(f'{datetime.now()} Calculating changesets stats from changesets between {counter - 50000} to {counter}')
             cursor.execute(sql)
             connection.commit()
-            counter = counter - timedelta(hours=1)
+            counter = counter - 50000
 
         cursor.close()
     
