@@ -211,15 +211,171 @@ class hashtags():
                     from public.osm_element_history osh
                     where "action" != 'delete'
                 and osh.changeset > {record['latest_changeset']}
-                group by changeset  on conflict do nothing;
+               group by changeset  on conflict do nothing;
 
                 '''
         cursor.execute(sql)
         connection.commit()
-        print(f"Inserted the new change sets with IDs > {num_format(record['latest_changeset'])}")
+        print(f"Inserted the new change sets with IDs > {num_format(record['latest_changeset'])}")   
+        
+        listOfMissedChangesetsSql =  f'''
+                   select t1.changeset
+                        from (
+                        select distinct osh.changeset
+                                from public.osm_element_history osh        
+                                where "timestamp" between NOW() - INTERVAL '1 DAY'  and now()
+                                 and action != 'delete'
+                                ) t1
+                        left outer join (
+
+                                select c.id
+                                    from public.all_changesets_stats s
+                                    join public.osm_changeset c on c.id = s.changeset where c.created_at between NOW() - INTERVAL '1 DAY'  and now()
+                              ) t2
+                        on t1.changeset = t2.id
+                        where t2.id is null 
+                        order by 1 desc              
+        '''
+               
+        cursor.execute(listOfMissedChangesetsSql)
+        
+        records = cursor.fetchall() 
+        print(f'''List of missed changesets {len(records)} in the last 24 hours \n{records}''',  )
+
+        
+        for row in records:
+            sql = f'''
+              insert into all_changesets_stats 
+                select osh.changeset , 
+                    sum((osh.tags ? 'building' and osh."type" in ('way','relation') and (osh."action" =  'create'))::int ) added_buildings,
+                    sum((osh.tags ? 'building' and osh."type" in ('way','relation') and (osh."action" =  'modify'))::int ) modified_buildings , 
+                    sum((osh.tags ? 'amenity' and osh."type" in ('way','node') and (osh."action" =  'create'))::int) added_amenity,
+                    sum((osh.tags ? 'amenity' and osh."type" in ('way','node') and (osh."action" =  'modify'))::int) modified_amenity , 
+                    sum((osh.tags ? 'highway' and (osh."action" =  'create'))::int) added_highway,
+                    sum((osh.tags ? 'highway' and (osh."action" =  'modify'))::int) modified_highway,
+                    sum ( 
+                    case 
+                        when (osh.tags ? 'highway' and osh."type" in ('way','relation') and  (osh."action" =  'create')) then ST_Length(public.construct_geometry(osh.id,
+                            osh.version,
+                            osh."timestamp",
+                            osh.nds,
+                            osh.changeset)::geography)
+                        else 0
+                    end
+                    ) added_highway_meters,
+                    sum ( 
+                    case 
+                        when (osh.tags ? 'highway' and osh."type" in ('way','relation') and  (osh."action" =  'modify')) then ST_Length(public.construct_geometry(osh.id,
+                            osh.version,
+                            osh."timestamp",
+                            osh.nds,
+                            osh.changeset)::geography)
+                        else 0
+                    end)  modified_highway_meters,
+                    sum(((osh.tags -> 'place' in ('isolated_dwelling', 'hamlet','village','neighbourhood','suburb','town','city')) and 
+                    	osh."type" in ('way','node') and 
+                    	(osh."action" =  'create') )::int) added_places, 
+                    sum(((osh.tags -> 'place' in ('isolated_dwelling', 'hamlet','village','neighbourhood','suburb','town','city')) and 
+                    	osh."type" in ('way','node') and 
+                    	(osh."action" =  'modify') )::int) modified_places
+                    from public.osm_element_history osh
+                    where "action" != 'delete'
+                and osh.changeset = {str(row[0])}
+               group by changeset on conflict do nothing;
+
+                '''
+            # Apotential enhancement is to use and osh.changeset in ( ... ) for the where condition
+            cursor.execute(sql)
+            connection.commit()
+            print(f"Inserted missed changeset # {str(row[0])}")  
+
 
         sql = f'''
               select max(changeset) latest_changeset from public.all_changesets_stats
+                '''
+        cursor.execute(sql)
+        record = cursor.fetchone()
+        print("The new calculated changetset ID=",record['latest_changeset'])
+
+        cursor.close()    
+    def updateFix(self,connection):
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        start = int(args.startChangedet)
+        while start > 0 :
+            listOfMissedChangesetsSql =  f'''
+                    select t1.changeset
+                            from (
+                            select distinct osh.changeset
+                                    from public.osm_element_history osh        
+                                    where osh.changeset between {start - 50000} and {start}
+                                    and action != 'delete'
+                                    ) t1
+                            left outer join (
+
+                                    select c.id
+                                        from public.all_changesets_stats s
+                                        join public.osm_changeset c on c.id = s.changeset 
+                                        where s.changeset between {start - 50000} and {start}
+                                ) t2
+                            on t1.changeset = t2.id
+                            where t2.id is null 
+            '''
+                
+            cursor.execute(listOfMissedChangesetsSql)
+            
+            records = cursor.fetchall() 
+            print(f'''{datetime.now()}: List of missed changesets {len(records)} between {start - 50000} and {start} ''' )
+            
+            for row in records:
+                sql = f'''
+                insert into all_changesets_stats 
+                    select osh.changeset , 
+                        sum((osh.tags ? 'building' and osh."type" in ('way','relation') and (osh."action" =  'create'))::int ) added_buildings,
+                        sum((osh.tags ? 'building' and osh."type" in ('way','relation') and (osh."action" =  'modify'))::int ) modified_buildings , 
+                        sum((osh.tags ? 'amenity' and osh."type" in ('way','node') and (osh."action" =  'create'))::int) added_amenity,
+                        sum((osh.tags ? 'amenity' and osh."type" in ('way','node') and (osh."action" =  'modify'))::int) modified_amenity , 
+                        sum((osh.tags ? 'highway' and (osh."action" =  'create'))::int) added_highway,
+                        sum((osh.tags ? 'highway' and (osh."action" =  'modify'))::int) modified_highway,
+                        sum ( 
+                        case 
+                            when (osh.tags ? 'highway' and osh."type" in ('way','relation') and  (osh."action" =  'create')) then ST_Length(public.construct_geometry(osh.id,
+                                osh.version,
+                                osh."timestamp",
+                                osh.nds,
+                                osh.changeset)::geography)
+                            else 0
+                        end
+                        ) added_highway_meters,
+                        sum ( 
+                        case 
+                            when (osh.tags ? 'highway' and osh."type" in ('way','relation') and  (osh."action" =  'modify')) then ST_Length(public.construct_geometry(osh.id,
+                                osh.version,
+                                osh."timestamp",
+                                osh.nds,
+                                osh.changeset)::geography)
+                            else 0
+                        end)  modified_highway_meters,
+                        sum(((osh.tags -> 'place' in ('isolated_dwelling', 'hamlet','village','neighbourhood','suburb','town','city')) and 
+                            osh."type" in ('way','node') and 
+                            (osh."action" =  'create') )::int) added_places, 
+                        sum(((osh.tags -> 'place' in ('isolated_dwelling', 'hamlet','village','neighbourhood','suburb','town','city')) and 
+                            osh."type" in ('way','node') and 
+                            (osh."action" =  'modify') )::int) modified_places
+                        from public.osm_element_history osh
+                        where "action" != 'delete'
+                    and osh.changeset = {str(row[0])}
+                group by changeset on conflict do nothing;
+
+                    '''
+                # Apotential enhancement is to use and osh.changeset in ( ... ) for the where condition
+                cursor.execute(sql)
+                connection.commit()
+            
+            print(f"Inserted missed changesets # {records}")  
+            start = start - 50000
+
+        sql = f'''
+            select max(changeset) latest_changeset from public.all_changesets_stats
                 '''
         cursor.execute(sql)
         record = cursor.fetchone()
@@ -241,8 +397,9 @@ argParser.add_argument('-u', '--user', action='store', dest='dbUser', default=No
 argParser.add_argument('-p', '--password', action='store', dest='dbPass', default=None, help='Database password')
 argParser.add_argument('-d', '--database', action='store', dest='dbName', default=None, help='Target database')
 argParser.add_argument('-U', '--update', action='store_true', dest='update', default=False, help='Top update the changetset statistics after the latest calculated changeset')
-argParser.add_argument('-F', '--fixAmenityPlaces', action='store_true', dest='fix', default=False, help='Fix amenity calcs and places from changeset')
+argParser.add_argument('-F', '--fix', action='store_true', dest='fix', default=False, help='Fix amenity calcs and places from changeset while creating and fixing missing changesets when used with -U to update replications')
 argParser.add_argument('-c', '--changeset', action='store', dest='maxChangeset', default=None, help='Maximum changeset ID to start from')
+argParser.add_argument('-s', '--startdate', action='store', dest='startChangedet', default=None, help='Starting changeset ID to fix missing changesets')
 
 args = argParser.parse_args()
 
@@ -274,7 +431,11 @@ except psycopg2.OperationalError as err:
 md = hashtags()
 
 if (args.update):
-    md.update(conn)
+    if (args.fix):
+        md.updateFix(conn)
+    else:
+        md.update(conn)
+   
 else:
     if (args.fix):
         md.fixAmenityPlaces(conn,args.maxChangeset)
