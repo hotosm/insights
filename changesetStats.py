@@ -303,22 +303,21 @@ class hashtags():
         start = int(args.startChangedet)
         while start > 0 :
             listOfMissedChangesetsSql =  f'''
-                    select t1.changeset
+             select t1.changeset
                             from (
                             select distinct osh.changeset
                                     from public.osm_element_history osh        
-                                    where osh.changeset between {start - 50000} and {start}
+                                    where osh.changeset between  {start - 50000} and {start}
                                     and action != 'delete'
                                     ) t1
                             left outer join (
-
-                                    select c.id
-                                        from public.all_changesets_stats s
-                                        join public.osm_changeset c on c.id = s.changeset 
-                                        where s.changeset between {start - 50000} and {start}
+                                    select s.changeset
+                                        from public.all_changesets_stats s                                      
+                                        where s.changeset between  {start - 50000} and {start}
                                 ) t2
-                            on t1.changeset = t2.id
-                            where t2.id is null 
+                            on t1.changeset = t2.changeset
+                            where t2.changeset is null 
+                    
             '''
                 
             cursor.execute(listOfMissedChangesetsSql)
@@ -371,7 +370,8 @@ class hashtags():
                 cursor.execute(sql)
                 connection.commit()
             
-            print(f"Inserted missed changesets # {records}")  
+            if (len(records) > 0):
+                print(f"Inserted missed {len(records)} changesets ")  
             start = start - 50000
 
         sql = f'''
